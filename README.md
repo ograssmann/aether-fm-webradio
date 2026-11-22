@@ -1,8 +1,14 @@
 # ÆTHER 102.3 – FM webradio for a vintage Bang & Olufsen receiver
 
-A Raspberry Pi 5 plays internet radio (moOde) and a Si4713 FM transmitter feeds it **by cable** into the FM antenna input of a Bang & Olufsen 9300 receiver (1990). The receiver keeps its original look and controls but gets a modern, stable station list. Everything sits in a 3D-printed enclosure with an OLED display, an IR remote and a single push button.
+A Raspberry Pi 5 plays internet radio (moOde) and a Si4713 FM transmitter feeds it **by cable** into the FM antenna input of a vintage Bang & Olufsen system. It was designed for a B&O 9300 and now runs at home with a BeoCenter 9500. The receiver keeps its original look and controls but gets a modern, stable station list. Everything sits in a 3D-printed enclosure with an OLED display, an IR remote and a single push button.
 
 ![The finished build](docs/build_photo.jpg)
+
+## Why I built it
+
+At home, ÆTHER 102.3 feeds a **Bang & Olufsen BeoCenter 9500** whose fixed installation still runs through the house: kitchen, bathroom and living room. FM stations have been disappearing, but the wiring, the speakers and the beautiful control panel are all still there. With this box they're useful again. Press one button and the radio plays, in every room, exactly as it did in the 1990s.
+
+There's some irony in it. It took a Raspberry Pi 5, two I²C buses, an FM transmitter chip, a self-monitoring daemon, a learned boot countdown and a couple of thousand lines of Python and CAD code to get back to what Bang & Olufsen did perfectly decades ago: **one button, and it just plays.** Progress, it turns out, is mostly about finding your way back to simplicity.
 
 ## Features
 
