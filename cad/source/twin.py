@@ -18,7 +18,7 @@ CH_Y, CH_Z = EY - W - 14.0, F + 22.0
 OX, ROW_Y = EX - 45.0, 24.0
 TA_X, TA_Z = EX - 20.0, F + 17.0
 IR_Y, IR_LZ = 60.0, F + 23.0
-MOD_X0, MOD_DX, MOD_Z = EX - W - 110.0 - 8.0, 33.0, F + 5.0
+MOD_X0, MOD_DX, MOD_Z = EX - W - 110.0 - 8.0 - 30.0, 33.0, F + 5.0   # V7g: 30 mm weiter nach hinten
 OLED_PCB_Z = EZ - 0.3 - 1.8 - 1.6
 
 parts = []   # (name, mesh, rgba)
@@ -156,8 +156,8 @@ KABEL.append(("schwarz", None, None, "Klinkenkabel 3,5 mm: DAC (gruen) -> Si4713
 # Antennen-Koax: vom Ende der Kette (F-Stecker-Tuelle) in einer Schlaufe zum ANT-Loetpunkt am Modulende (+x, vorne)
 KO = "Kabel braun: Antennen-Koax: F-Stecker -> Si4713 ANT (Seele) / GND (Schirm)"
 ant = (SX0 + 36.5, CH_Y - 15.0 + 2.7, MOD_Z + 1.9)
-koax = [(104.0, CH_Y, CH_Z), (98.0, CH_Y, CH_Z - 1), (90.0, CH_Y - 4, CH_Z - 8), (84.0, CH_Y - 14, MOD_Z + 6),
-        (100.0, CH_Y - 20, MOD_Z + 4), (ant[0] + 2, ant[1] - 6, ant[2] + 3), ant]
+koax = [(104.0, CH_Y, CH_Z), (103.0, CH_Y - 3, CH_Z - 4), (102.0, CH_Y - 8, CH_Z - 10), (ant[0] + 4, ant[1] - 3, MOD_Z + 7),
+        (ant[0] + 1.5, ant[1] - 1, ant[2] + 2.5), ant]
 kabel_teile.append((KO, kabel_mesh(koax, 1.3), [120, 80, 60, 255]))
 KABEL.append(("braun", None, None, "Antennen-Koax: F-Stecker -> Si4713 ANT (Seele) / GND (Schirm)"))
 

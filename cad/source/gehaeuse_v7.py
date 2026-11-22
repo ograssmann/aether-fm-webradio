@@ -13,7 +13,8 @@ PAD, STAND = 8.0, 0.0   # V6c: Pi auf 8 mm hohen gedruckten Tuermchen (3 mm hoeh
 HOLES = [(3.5, 3.5), (61.5, 3.5), (3.5, 52.5), (61.5, 52.5)]
 MOD_DX = 33.0   # Abstand der zwei Modul-Befestigungslöcher (aus Foto, bitte nachmessen)
 # V7: Gewinde-Einschmelzmuttern (ein Typ fuer alles, gemessen ca. 3,2 mm aussen -> M2)
-INS_D, INS_T, BOSS_R = 2.9, 5.0, 3.4      # Bohrung Ø, Tiefe, Dom-Radius
+INS_D, INS_T, BOSS_R = 3.2, 6.0, 3.4      # V7g: Bohrung Ø 3,2 (gedruckt ca. 3,0) und 6 mm tief - 2,9/5 war zu eng und zu kurz
+INS_FASE, INS_RAUM_D, INS_RAUM_T = 0.5, 3.6, 1.5   # Einfuehrung oben Ø 3,6 x 0,5; Freiraum unten Ø 3,6 x 1,5 fuer verdraengtes PLA
 
 IX = EX_TARGET - 2 * W
 IY = GAP + BOARD_Y + MODULE_ZONE
@@ -71,7 +72,7 @@ CH_R = 6.4                    # Radius Mulde in den Saetteln
 SADDLES = [EX - 67.0, EX - 36.0]   # V7: Wiegen mittig unter den beiden Daempferkoerpern (aus Foto)
 CLIP_D = 10.8                      # Innen-Ø der Klemmwiege = Daempferkoerper (bitte nachmessen)
 CHAIN_L, PIGTAIL, MOD_L = 110.0, 5.0, 40.0    # Laenge Durchfuehrung+2 Daempfer+F-Stecker, Abstand zum Modul, Modul (Langloch +-6 mm zum Anpassen)
-MOD_X0 = EX - W - CHAIN_L - 8.0          # V7: Modul unter dem Kettenende (F-Stecker), Loecher bei MOD_X0 und +MOD_DX
+MOD_X0 = EX - W - CHAIN_L - 8.0 - 30.0   # V7g: Modul 30 mm weiter nach hinten, nicht mehr unter dem F-Stecker (war zu eng); Loecher bei MOD_X0 und +MOD_DX
 MOD = [(MOD_X0, CH_Y), (MOD_X0 + MOD_DX, CH_Y)]
 F_D = 10.0                    # F-Durchfuehrung (Superbat) in der rechten Stirnwand
 TA_X, TA_Z, TA_D = EX - 20.0, F + 17.0, 12.2     # V6b: 12-mm-Metalltaster in der Frontwand rechts (an J2), Deckel frei
@@ -103,7 +104,16 @@ base = base.subtract(union_all(cuts))
 def dome(pts, z_top, r=BOSS_R):
     return union_all([cyl((x, y, F - 0.5), (x, y, z_top), r, 32) for x, y in pts])
 def einsatz(pts, z_top):
-    return union_all([cyl((x, y, z_top - INS_T), (x, y, z_top + 1), INS_D / 2, 24) for x, y in pts])
+    """Loch fuer Gewinde-Einschmelzmutter M2: Bohrung + Einfuehrung oben + breiterer Freiraum unten (geschmolzenes PLA)."""
+    teile = []
+    for x, y in pts:
+        boden = z_top - INS_T
+        teile.append(cyl((x, y, boden), (x, y, z_top + 1), INS_D / 2, 24))                 # Bohrung fuer den Einsatz
+        teile.append(cyl((x, y, z_top - INS_FASE), (x, y, z_top + 1), INS_RAUM_D / 2, 24))  # Einfuehrung
+        unten = max(0.8, boden - INS_RAUM_T)                                                # mind. 0,8 mm Boden bleibt
+        if unten < boden:
+            teile.append(cyl((x, y, unten), (x, y, boden + 0.01), INS_RAUM_D / 2, 24))      # Freiraum unter dem Einsatz
+    return union_all(teile)
 PI_P = [(BX + x, BY + y) for x, y in HOLES]
 base = base.union(dome(PI_P, F + PAD)).subtract(einsatz(PI_P, F + PAD))
 # Saettel fuer die Daempfer-Kette: Mulde + Tunnel quer fuer einen Kabelbinder (bis 4,5 mm breit)

@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ÆTHER 102.3 Twin</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap">
@@ -89,7 +93,8 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 </style>
 
 <aside>
-  <div><h1>ÆTHER 102.3</h1><div class="sub">Gehäuse V7 · 215 × 95,5 × 42 mm</div></div>
+  <div><h1>ÆTHER 102.3</h1><div class="sub" id="subt">Gehäuse V7 · 215 × 95,5 × 42 mm</div>
+    <div class="row" role="group" aria-label="Language / Sprache" style="margin-top:6px"><button id="lgEN" aria-pressed="true">English</button><button id="lgDE" aria-pressed="false">Deutsch</button></div></div>
   <div class="grp"><span class="lbl">Deckel</span>
     <div class="row">
       <button id="lidOn" aria-pressed="true">aufgesetzt</button>
@@ -159,6 +164,116 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
+
+// ---- Sprache / language: English (default) or German ----
+let LANG = 'en';
+try { LANG = localStorage.getItem('aether-lang') || 'en'; } catch (e) {}
+const EN = {
+  // UI
+  'Gehäuse V7 · 215 × 95,5 × 42 mm': 'Enclosure V7 · 215 × 95.5 × 42 mm', 'Deckel': 'Lid', 'aufgesetzt': 'on', 'abgehoben': 'lifted', 'aus': 'off',
+  'Gehäuse-Transparenz': 'Enclosure transparency', 'Ansicht': 'View', 'Oben': 'Top', 'Vorne': 'Front', 'Rechts': 'Right',
+  'Test: Fehlerfälle': 'Test: fault scenarios', 'Zeitraffer': 'Time-lapse', 'Kabel': 'Cables', 'Bauteile': 'Components', 'alle an': 'all on', 'alle aus': 'all off',
+  'Ziehen = drehen · Rad / Pinch = zoomen · Rechtsklick = verschieben · Klick = Bauteil': 'Drag = rotate · Wheel / pinch = zoom · Right-click = pan · Click = component',
+  'Modell wird geladen …': 'Loading model …', 'Modell konnte nicht geladen werden.': 'Model could not be loaded.',
+  'Ausgang UKW (Audiopegel)': 'FM output (audio level)', 'Pi 5 Eingangsspannung': 'Pi 5 input voltage', 'CPU-Auslastung · letzte 3 min': 'CPU load · last 3 min',
+  'Träger': 'Carrier', 'HF am B&O': 'RF at the B&O', 'Sim-Zeit': 'Sim time', 'Temperatur': 'Temperature', 'Lüfter': 'Fan', 'WLAN': 'WiFi', 'Laufzeit': 'Uptime',
+  'Fernbedienung': 'Remote', 'jetzt': 'now', 'kein Signal': 'no signal', 'steht': 'stopped', 'getrennt': 'disconnected',
+  'aus (Pi aus)': 'off (Pi off)', 'aus (Neustart)': 'off (rebooting)', 'an · 102,3 MHz': 'on · 102.3 MHz', 'aus (Stille)': 'off (silence)', 'an': 'on',
+  'nicht belegt': 'not assigned', 'Taste nicht belegt': 'Key not assigned',
+  // Fehlerfaelle
+  'Normalbetrieb': 'Normal operation', 'WLAN schwach': 'Weak WiFi', 'WLAN / Internet weg': 'WiFi / internet down', 'Zu laut (Clipping)': 'Too loud (clipping)',
+  'Zu leise': 'Too quiet', 'Stream hängt': 'Stream stalled', 'Pause (Stille)': 'Pause (silence)', 'moOde antwortet nicht': 'moOde not responding',
+  'I²C-Störung Sender': 'I²C fault on transmitter', 'fm.py hängt': 'fm.py hung', 'System hängt': 'System hung', 'Pi zu heiss': 'Pi too hot',
+  'Netzteil zu schwach': 'Power supply too weak',
+  // Belegung
+  'Lauter (+2 %)': 'Louder (+2 %)', 'Leiser (−2 %)': 'Quieter (−2 %)', 'Nächster Favorit': 'Next favourite', 'Vorheriger Favorit': 'Previous favourite',
+  'Favorit 1': 'Favourite 1', 'Favorit 2': 'Favourite 2', 'Favorit 3': 'Favourite 3', 'Favorit 4': 'Favourite 4', 'Favorit 5': 'Favourite 5',
+  'Systeminfo 10 s (CPU, RAM, Temp …)': 'System info 10 s (CPU, RAM, temp …)',
+  // Log / OLED
+  'fm.py reagiert nicht mehr – Anzeige friert ein': 'fm.py stopped responding – display freezes', 'Linux hängt – nichts reagiert mehr': 'Linux hung – nothing responds',
+  'Taster kurz: Pi schaltet ein': 'Button short: Pi powers on', 'Pi startet': 'Pi booting', 'Taster 5 s gehalten → Pi fährt herunter und schaltet aus': 'Button held 5 s → Pi shuts down and powers off',
+  'Pi startet neu (ca. 35 s)': 'Pi rebooting (about 35 s)', 'fm.py läuft – Sender an': 'fm.py running – transmitter on', 'fm.py läuft wieder': 'fm.py running again',
+  'systemd-Watchdog: 60 s kein Lebenszeichen → fm.py neu gestartet': 'systemd watchdog: no sign of life for 60 s → fm.py restarted',
+  'Hardware-Watchdog: 15 s Stillstand → Pi startet neu': 'Hardware watchdog: 15 s stall → Pi reboots', 'Wächter: kein Internet': 'Watchdog: no internet',
+  'Wächter: 2 min offline → WLAN aus/ein': 'Watchdog: offline 2 min → WiFi off/on', 'WLAN wird neu verbunden': 'Reconnecting WiFi', 'kein Internet': 'no internet',
+  'Internet wieder da': 'Internet back', 'Wächter: moOde (mpd) wird neu gestartet': 'Watchdog: restarting moOde (mpd)', 'moOde wird neu gestartet': 'Restarting moOde',
+  '5 Fehler → fm.py beendet, systemd startet es neu': '5 errors → fm.py exits, systemd restarts it', 'Sender startet': 'Transmitter starting',
+  'Stream-Wächter: 15 s Stille trotz Play → Stream neu gestartet': 'Stream watchdog: 15 s silence while playing → stream restarted',
+  '50 s Stille → Träger aus (OFCOM)': '50 s silence → carrier off (OFCOM)', 'Ton da → Träger an': 'Sound back → carrier on',
+  'FM 102.3  aus (Stille)': 'FM 102.3  off (silence)', 'FM 102.3  Pause': 'FM 102.3  paused', 'FM 102.3  leiser stellen!': 'FM 102.3  turn down!',
+  'Taster': 'Button', 'kurz = Start/Stop': 'short = start/stop', 'halten = Ausschalten': 'hold = power off', 'Neustart': 'Reboot',
+  'UKW-Webradio': 'FM webradio', 'moOde laedt ...': 'moOde loading ...', 'FM 102.3 bereit': 'FM 102.3 ready', 'fm.py neu gestartet': 'fm.py restarted',
+  'WLAN getrennt': 'WiFi disconnected', 'Nachrichten': 'News',
+  // Bauteil-Gruppen
+  'Antennenkette': 'Antenna chain', 'J2 Power-Taster-Stifte': 'J2 power button pins', 'Seitendeckel (Pi-Fenster)': 'Side cover (Pi window)',
+  'Si4713 FM-Modul': 'Si4713 FM module', 'USB-DAC': 'USB DAC', 'IR-Empfänger': 'IR receiver', 'Gehäuse (Unterteil)': 'Enclosure (base)',
+  'Unterteil': 'Base', 'Schrift': 'Lettering'
+};
+const WORTE = [['Seitendeckel (Rastdeckel Pi-Fenster)', 'Side cover (snap-in, Pi window)'], ['Pi J2 Power-Taster (2 Stifte nachgeruestet)', 'Pi J2 power button (2 pins retrofitted)'],
+  ['Antennen-Koax', 'Antenna coax'], ['Klinkenkabel', 'jack cable'], ['Klinkenbuchse', 'jack socket'], ['Stiftleiste', 'pin header'], ['GPIO-Leiste', 'GPIO header'],
+  ['GPIO-Stift', 'GPIO pin'], ['Anzeigeflaeche', 'display area'], ['Flexkabel', 'flex cable'], ['Befestigungsloch', 'mounting hole'], ['Luefter-Anschluss', 'fan connector'],
+  ['Luefter-Gehaeuse', 'fan housing'], ['Grundplatte', 'base plate'], ['Luefter', 'fan'], ['Rippen', 'fins'], ['Gehaeuse', 'housing'], ['Kopfhoerer', 'headphones'],
+  ['Mikrofon', 'microphone'], ['USB-Stecker', 'USB plug'], ['F-Durchfuehrung', 'F bulkhead socket'], ['F-Mutter innen', 'F inner nut'], ['F-Stecker Tuelle', 'F plug boot'],
+  ['F-Stecker', 'F plug'], ['Daempfer', 'Attenuator'], ['Sechskant', 'hex'], ['Empfaenger', 'receiver'], ['Abschirmung', 'shield'], ['Linse', 'lens'],
+  ['Platine', 'board'], ['Widerstand', 'resistor'], ['90 Grad', '90°'], ['Glas', 'glass'], ['Ethernet Buchse', 'Ethernet socket'], ['PoE-Stifte', 'PoE pins'],
+  ['Power-Knopf', 'power button'], ['RTC-Batterie', 'RTC battery'], ['Oeffnung', 'opening'], ['Zunge', 'tongue'], ['(Strom)', '(power)'], ['WLAN-Modul', 'WiFi module'],
+  ['microSD-Halter', 'microSD holder'], ['microSD-Karte', 'microSD card'], ['Loetpunkt', 'solder pad'], ['Quarz', 'crystal'], ['Spannungsregler', 'voltage regulator'],
+  ['11-pol.', '11-pin'], ['Stift', 'pin'], ['Klinke', 'jack'], ['Mutter', 'nut'], ['Taster (Polung egal)', 'button (any polarity)'], ['Taster', 'Button'],
+  ['Seele', 'centre'], ['Schirm', 'shield'], ['Buchse', 'Socket'], ['Kabel', 'Cable'], ['FM-Modul', 'FM module'], ['Deckel', 'Lid'], ['Unterteil', 'Base'],
+  ['Schrift', 'Lettering'], ['LED gruen', 'LED green'], ['LED rot', 'LED red'],
+  [' gruen', ' green'], [' rot', ' red'], [' blau', ' blue'], [' gelb', ' yellow'], [' lila', ' purple'], [' schwarz', ' black'], [' weiss', ' white'], [' braun', ' brown'],
+  ['(gruen)', '(green)'], ['3,3 V', '3.3 V'], ['3,5 mm', '3.5 mm']];
+const REGELN = [
+  [/^Kein Internet (.*)$/, 'No internet $1'], [/^Pi heiss (\d+) C$/, 'Pi hot $1 C'], [/^Sender-Stoerung V(\d+)$/, 'TX fault V$1'],
+  [/^Lautstaerke (\d+)%$/, 'Volume $1%'], [/^Auto: leiser (\d+)%$/, 'Auto: quieter $1%'], [/^Auto: lauter (\d+)%$/, 'Auto: louder $1%'],
+  [/^Fernbedienung (\S+): Pi ist aus – nur der Taster schaltet ein$/, 'Remote $1: Pi is off – only the button turns it on'],
+  [/^Fernbedienung (\S+): keine Reaktion \(Pi startet\)$/, 'Remote $1: no reaction (Pi booting)'], [/^Fernbedienung (\S+): keine Reaktion \(hängt\)$/, 'Remote $1: no reaction (hung)'],
+  [/^Fernbedienung 0 → Systeminfo an \(10 s\)$/, 'Remote 0 → system info on (10 s)'], [/^Fernbedienung 0 → Systeminfo aus$/, 'Remote 0 → system info off'],
+  [/^Fernbedienung (\S+) → (.*)$/, (m, a, b) => `Remote ${a} → ${T(b)}`], [/^Taster kurz → (.*)$/, 'Button short → $1'],
+  [/^Taster ([\d.]+) s gehalten – zu kurz zum Ausschalten$/, 'Button held $1 s – too short to power off'], [/^Test: (.*)$/, (m, a) => 'Test: ' + T(a)],
+  [/^Neustart wegen: (.*)$/, (m, a) => 'Reboot due to: ' + T(a)], [/^Wächter: moOde antwortet nicht \((\d)\/3\)$/, 'Watchdog: moOde not responding ($1/3)'],
+  [/^I²C-Fehler – Chip neu gestartet, Versuch (\d)\/5$/, 'I²C error – chip restarted, attempt $1/5'],
+  [/^Automatik: CLIP → leiser (\d+) %$/, 'Auto level: CLIP → quieter $1 %'], [/^Automatik: zu leise → lauter (\d+) %$/, 'Auto level: too quiet → louder $1 %'],
+  [/^aus in (.*)$/, 'off in $1'], [/^Temp (\S+)  Luefter (.*)$/, 'Temp $1  Fan $2'], [/^Netzteil (\S+) V$/, (m, a) => 'PSU ' + a.replace(',', '.') + ' V'],
+  [/^WLAN (-?\d+) dBm$/, 'WiFi $1 dBm'], [/^Laeuft (.*)$/, 'Up $1'], [/^(\d+) U\/min$/, '$1 rpm'], [/^(.*) anzeigen$/, (m, a) => 'Show ' + T(a)],
+  [/^(.*) aufklappen$/, (m, a) => 'Expand ' + T(a)], [/^(.*) · (.*)$/, (m, a, b) => T(a) + ' · ' + T(b)]];
+function T(s) {
+  if (LANG === 'de' || s == null || s === '') return s;
+  if (EN[s] !== undefined) return EN[s];
+  for (const [re, r] of REGELN) if (re.test(s)) return s.replace(re, r);
+  let o = s;
+  for (const [de, en] of WORTE) o = o.split(de).join(en);
+  return o;
+}
+const TR = s => T(s);   // fuer Funktionen mit lokaler Variable T
+const STATISCH = [];   // [element, attribute|null, deutscher Text]
+function statisch() {
+  document.querySelectorAll('aside .lbl, aside .sub, #lidOn, #lidUp, #lidOff, #vTop, #vFront, #vRight, #cabOn, #cabOff, #allOn, #allOff, #tip, #load, figcaption, #werte dt')
+    .forEach(el => { if (el.children.length === 0 || el.tagName === 'LABEL') STATISCH.push([el, null, el.textContent]); });
+  const leg = document.querySelector('.rc-legende'); STATISCH.push([leg, 'html', leg.innerHTML]);
+  document.querySelectorAll('[aria-label]').forEach(el => STATISCH.push([el, 'aria-label', el.getAttribute('aria-label')]));
+}
+const LEGENDE_EN = '<b>OK</b> Start/Stop · <b>▲▼</b> Volume ±2 % · <b>◀▶</b> Station · <b>1–5</b> Favourites · <b>0</b> System info · <b>Button on the enclosure</b> (click it in 3D): short = start/stop or power on, hold 5 s = power off';
+const ARIA_EN = { 'Fehlerfall': 'Fault scenario', 'Zeitraffer': 'Time-lapse', 'Fernbedienung': 'Remote', 'Fernbedienung einklappen': 'Collapse remote', 'hoch': 'up',
+  'links': 'left', 'rechts': 'right', 'runter': 'down', 'VU-Meter Ausgang': 'VU meter output', 'Voltmeter Pi-Eingang': 'Voltmeter Pi input', 'CPU-Auslastung über die Zeit': 'CPU load over time' };
+function sprache(l) {
+  LANG = l; try { localStorage.setItem('aether-lang', l); } catch (e) {}
+  document.documentElement.lang = l;
+  document.getElementById('lgEN').setAttribute('aria-pressed', String(l === 'en'));
+  document.getElementById('lgDE').setAttribute('aria-pressed', String(l === 'de'));
+  STATISCH.forEach(([el, a, de]) => {
+    if (a === 'html') el.innerHTML = l === 'de' ? de : LEGENDE_EN;
+    else if (a) el.setAttribute(a, l === 'de' ? de : (ARIA_EN[de] || T(de)));
+    else el.textContent = T(de);
+  });
+  document.querySelectorAll('[data-de]').forEach(el => { el.textContent = (el.dataset.pre || '') + T(el.dataset.de); });
+  document.querySelectorAll('#faults button').forEach(b => b.textContent = T(FAELLE.find(x => x[0] === b.dataset.f)[1]));
+  document.querySelectorAll('#rc [data-k]').forEach(b => b.title = T(BELEGUNG[b.dataset.k] || 'nicht belegt'));
+  document.querySelectorAll('#list li input, #cables li input').forEach(cb => { const sp = cb.parentElement.querySelector('span'); if (sp) cb.setAttribute('aria-label', T(sp.dataset.de + ' anzeigen')); });
+  const rcz = document.getElementById('rc-zu'); if (document.getElementById('rc').classList.contains('zu')) rcz.textContent = T('Fernbedienung');
+  const sel = document.getElementById('sel'); if (sel.dataset.de) sel.textContent = T(sel.dataset.de);
+}
+
 const EX = 215, EY = 95.5, EZ = 42;
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -218,7 +333,8 @@ function onModel(gltf) {
   const zeile = (ul, key, farbe, text) => {
     const li = document.createElement('li'); li.dataset.n = key;
     const id = 'sw' + ul.children.length + ul.id;
-    li.innerHTML = `<input type="checkbox" class="sw" id="${id}" checked aria-label="${text} anzeigen"><i style="background:${farbe}"></i><span>${text}</span>`;
+    li.innerHTML = `<input type="checkbox" class="sw" id="${id}" checked><i style="background:${farbe}"></i><span></span>`;
+    const sp = li.querySelector('span'); sp.dataset.de = text; sp.textContent = T(text); li.querySelector('input').setAttribute('aria-label', T(text + ' anzeigen'));
     li.querySelector('input').onchange = e => { parts[key].forEach(m => m.visible = e.target.checked); };
     li.querySelector('span').onclick = () => pick(key);
     ul.appendChild(li);
@@ -228,7 +344,7 @@ function onModel(gltf) {
     zeile(ul, n, '#' + parts[n][0].userData.base.getHexString(), n);
     const li = ul.lastChild, subs = [...new Set(parts[n].map(m => m.userData.name))].filter(x => parts['S:' + x]);
     if (subs.length < 2) return;
-    const btn = document.createElement('button'); btn.className = 'auf'; btn.textContent = '▸'; btn.setAttribute('aria-label', n + ' aufklappen');
+    const btn = document.createElement('button'); btn.className = 'auf'; btn.textContent = '▸'; btn.setAttribute('aria-label', T(n + ' aufklappen'));
     li.insertBefore(btn, li.firstChild);
     const sub = document.createElement('ul'); sub.className = 'subs'; sub.id = 'sub' + ul.children.length; sub.hidden = true;
     subs.forEach(x => zeile(sub, 'S:' + x, '#' + parts['S:' + x][0].userData.base.getHexString(), x.replace(/^(Pi|Si4713|OLED|IR|DAC|Active Cooler) /, '')));
@@ -272,7 +388,7 @@ const S = { station: 0, userStop: false, fall: 'ok', speed: 10, t: 0, vol: 62, p
 function log(text) {
   const ol = document.getElementById('log'), li = document.createElement('li');
   const m = Math.floor(S.t / 60), sec = Math.floor(S.t % 60);
-  li.textContent = `${m}:${String(sec).padStart(2, '0')}  ${text}`; li.className = 'neu';
+  li.dataset.pre = `${m}:${String(sec).padStart(2, '0')}  `; li.dataset.de = text; li.textContent = li.dataset.pre + T(text); li.className = 'neu';
   ol.prepend(li); [...ol.children].slice(1).forEach(x => x.className = ''); while (ol.children.length > 40) ol.lastChild.remove();
 }
 function melden(text, sek = 2.5) { S.meldung = text; S.meldungBis = performance.now() + sek * 1000; }   // Echtzeit, unabhaengig vom Zeitraffer
@@ -405,7 +521,7 @@ function anzeigen(now) {
   const c = oled.ctx, ON = '#bff4ff';
   if ((S.fall === 'fm_haengt' || S.fall === 'system') && S.phase === 'run') return;   // eingefroren
   c.fillStyle = '#000'; c.fillRect(0, 0, 128, 64); c.fillStyle = ON; c.strokeStyle = ON; c.textBaseline = 'top';
-  const zeilen = (a, b, d) => { c.font = 'bold 12px sans-serif'; c.fillText(a, 0, 0, 127); c.font = '10px sans-serif'; c.fillText(b, 0, 18, 127); c.fillRect(0, 50, 128, 1); c.fillText(d, 0, 53, 127); };
+  const zeilen = (a, b, d) => { c.font = 'bold 12px sans-serif'; c.fillText(T(a), 0, 0, 127); c.font = '10px sans-serif'; c.fillText(T(b), 0, 18, 127); c.fillRect(0, 50, 128, 1); c.fillText(T(d), 0, 53, 127); };
   if (S.phase === 'off') { oled.tex.needsUpdate = true; return; }
   if (S.hold) { const h = (performance.now() - S.hold) / 1000; zeilen('Taster', h < 1.5 ? 'kurz = Start/Stop' : 'halten = Ausschalten', h < 1.5 ? '' : `aus in ${Math.max(0, 5 - h).toFixed(1)} s`); oled.tex.needsUpdate = true; return; }
   if (S.phase === 'countdown') { zeilen('Neustart', S.bootText, `in ${Math.ceil(S.phaseBis - S.t)} s`); oled.tex.needsUpdate = true; return; }
@@ -416,16 +532,16 @@ function anzeigen(now) {
     c.font = '10px sans-serif'; const up = Math.floor(S.uptime), d = Math.floor(up / 86400), h = Math.floor(up % 86400 / 3600), m = Math.floor(up % 3600 / 60);
     [`CPU ${Math.round(S.cpu)} %   RAM ${Math.round(S.ram)} %`, `Temp ${Math.round(S.temp)}°C  Luefter ${S.luefter}`, `Netzteil ${S.volt.toFixed(2).replace('.', ',')} V`,
      S.dbm == null ? 'WLAN getrennt' : `WLAN ${S.dbm} dBm`, 'IP 192.168.1.42', `Laeuft ${d} d ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`]
-      .forEach((z, i) => c.fillText(z, 0, i * 10.6 - 1, 127));
+      .forEach((z, i) => c.fillText(T(z), 0, i * 10.6 - 1, 127));
     oled.tex.needsUpdate = true; return;
   }
   const [sender, titel] = SENDER[S.station];
-  const oben = S.meldung && performance.now() < S.meldungBis ? S.meldung : sender;
+  const oben = S.meldung && performance.now() < S.meldungBis ? T(S.meldung) : sender;
   c.font = 'bold 12px sans-serif'; c.fillText(oben, 0, 0, 108);
   for (let i = 0; i < 4; i++) { const h = 3 + i * 2, x = 112 + i * 4; if (i < S.wifi) c.fillRect(x, 10 - h, 3, h + 1); else c.strokeRect(x + 0.5, 10.5 - h, 2, h); }
   if (S.wifi === 0) { c.beginPath(); c.moveTo(110, 0); c.lineTo(127, 11); c.stroke(); }
   c.font = '10px sans-serif';
-  const tt = S.spielt ? titel : '', w = c.measureText(tt).width, off = w > 127 ? (now / 1000 * 12) % (w + 20) : 0;
+  const tt = S.spielt ? T(titel) : '', w = c.measureText(tt).width, off = w > 127 ? (now / 1000 * 12) % (w + 20) : 0;
   c.save(); c.beginPath(); c.rect(0, 14, 128, 22); c.clip(); c.fillText(tt, -off, 16); if (off) c.fillText(tt, w + 20 - off, 16); c.restore();
   const y = 47;
   if (S.traeger && S.spielt) {
@@ -440,7 +556,7 @@ function anzeigen(now) {
     else { c.strokeRect(106.5, y - 7.5, 21, 8); c.fillText('CLIP', 108, y - 7); }
   } else c.fillRect(0, 50, 128, 1);
   c.font = '10px sans-serif'; const tmpT = Math.round(S.temp) + '°C', tw = c.measureText(tmpT).width;
-  c.fillText(tmpT, 127 - tw, 53); c.fillText(S.status, 0, 53, 124 - tw);
+  c.fillText(tmpT, 127 - tw, 53); c.fillText(T(S.status), 0, 53, 124 - tw);
   oled.tex.needsUpdate = true;
 }
 // ---- Messinstrumente: VU-Meter (Ausgang) und Voltmeter (Pi 5 V) ----
@@ -472,7 +588,7 @@ function cpuVerlauf() {
   c.clearRect(0, 0, W, H); c.font = '10px "IBM Plex Mono", monospace'; c.textAlign = 'right'; c.textBaseline = 'middle';
   [0, 25, 50, 75, 100].forEach(v => { c.strokeStyle = line; c.lineWidth = 1; c.beginPath(); c.moveTo(L, y(v) + .5); c.lineTo(R, y(v) + .5); c.stroke();
     c.fillStyle = muted; c.fillText(v + '%', L - 4, y(v)); });
-  c.textAlign = 'left'; c.textBaseline = 'top'; c.fillStyle = muted; c.fillText('−3 min', L, B + 4); c.textAlign = 'right'; c.fillText('jetzt', R, B + 4);
+  c.textAlign = 'left'; c.textBaseline = 'top'; c.fillStyle = muted; c.fillText('−3 min', L, B + 4); c.textAlign = 'right'; c.fillText(TR('jetzt'), R, B + 4);
   const off = CPU_N - CPU_HIST.length;
   c.beginPath(); let auf = false;
   CPU_HIST.forEach((v, i) => { if (v == null) { auf = false; return; } const px = x(off + i), py = y(v); if (!auf) { c.moveTo(px, py); auf = true; } else c.lineTo(px, py); });
@@ -490,38 +606,38 @@ function instrumente() {
   S.hfAus = S.phase === 'off';
   const ziel = aus ? -20 : S.rel;
   vuAnz += (ziel - vuAnz) * 0.35;
-  zeiger(document.getElementById('vu'), vuAnz, -20, 3, [[-20, '20'], [-10, '10'], [-5, '5'], [-3, '3'], [0, '0'], [3, '+3']], [0, 3], 'VU', 'dB', aus ? 'kein Signal' : `${(vuAnz).toFixed(0)} dB`);
+  zeiger(document.getElementById('vu'), vuAnz, -20, 3, [[-20, '20'], [-10, '10'], [-5, '5'], [-3, '3'], [0, '0'], [3, '+3']], [0, 3], 'VU', 'dB', aus ? T('kein Signal') : `${(vuAnz).toFixed(0)} dB`);
   const v = S.phase === 'boot' && S.phaseBis - S.t > 33 ? 5.0 : S.volt;
   zeiger(document.getElementById('volt'), v, 4.4, 5.4, [[4.4, '4,4'], [4.63, '4,63'], [4.8, '4,8'], [5.0, '5,0'], [5.2, '5,2'], [5.4, '5,4']], [4.4, 4.63], 'V', 'V',
     `${v.toFixed(2).replace('.', ',')} V` + (v < 4.63 ? '  ⚡' : ''));
-  document.getElementById('w-tr').textContent = S.phase === 'off' ? 'aus (Pi aus)' : S.phase !== 'run' || S.fall === 'system' ? 'aus (Neustart)' : S.traeger ? 'an · 102,3 MHz' : 'aus (Stille)';
+  document.getElementById('w-tr').textContent = T(S.phase === 'off' ? 'aus (Pi aus)' : S.phase !== 'run' || S.fall === 'system' ? 'aus (Neustart)' : S.traeger ? 'an · 102,3 MHz' : 'aus (Stille)');
   document.getElementById('w-vol').textContent = S.vol + ' %';
   document.getElementById('w-hf').textContent = S.traeger && S.phase === 'run' ? '≈ 70 dBµV' : '–';
   const piAus = S.phase === 'off';
   document.getElementById('w-cpu').textContent = piAus ? '–' : Math.round(S.cpu) + ' %';
   document.getElementById('w-ram').textContent = piAus ? '–' : Math.round(S.ram) + ' %';
   document.getElementById('w-temp').textContent = piAus ? '–' : Math.round(S.temp) + ' °C';
-  document.getElementById('w-fan').textContent = piAus ? '–' : S.luefter ? S.luefter + ' U/min' : 'steht';
-  document.getElementById('w-dbm').textContent = piAus ? '–' : S.dbm == null ? 'getrennt' : S.dbm + ' dBm';
+  document.getElementById('w-fan').textContent = piAus ? '–' : T(S.luefter ? S.luefter + ' U/min' : 'steht');
+  document.getElementById('w-dbm').textContent = piAus ? '–' : S.dbm == null ? T('getrennt') : S.dbm + ' dBm';
   const up = Math.floor(S.uptime || 0); document.getElementById('w-up').textContent = piAus ? '–' : `${Math.floor(up / 86400)} d ${String(Math.floor(up % 86400 / 3600)).padStart(2, '0')}:${String(Math.floor(up % 3600 / 60)).padStart(2, '0')}`;
   document.getElementById('w-t').textContent = `${Math.floor(S.t / 60)}:${String(Math.floor(S.t % 60)).padStart(2, '0')}`;
 }
 (function fernbedienung() {
   document.querySelectorAll('#rc [data-k]').forEach(b => {
     b.onclick = () => taste(b.dataset.k);
-    b.title = BELEGUNG[b.dataset.k] || 'nicht belegt';
+    b.title = T(BELEGUNG[b.dataset.k] || 'nicht belegt');
   });
   document.getElementById('rc-zu').onclick = () => { const rc = document.getElementById('rc'); rc.classList.toggle('zu');
-    document.getElementById('rc-zu').textContent = rc.classList.contains('zu') ? 'Fernbedienung' : '–'; };
+    document.getElementById('rc-zu').textContent = rc.classList.contains('zu') ? T('Fernbedienung') : '–'; };
 })();
 (function testUI() {
   const box = document.getElementById('faults');
-  FAELLE.forEach(([k, t]) => { const b = document.createElement('button'); b.dataset.f = k; b.textContent = t; b.setAttribute('role', 'radio');
+  FAELLE.forEach(([k, t]) => { const b = document.createElement('button'); b.dataset.f = k; b.textContent = T(t); b.setAttribute('role', 'radio');
     b.setAttribute('aria-checked', String(k === 'ok')); b.onclick = () => setFall(k); box.appendChild(b); });
   document.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { S.speed = +b.dataset.sp;
     document.querySelectorAll('[data-sp]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
 })();
-function fail(e) { console.error(e); document.getElementById('load').textContent = 'Modell konnte nicht geladen werden.'; }
+function fail(e) { console.error(e); document.getElementById('load').textContent = T('Modell konnte nicht geladen werden.'); }
 // glTF-JSON mit eingebettetem Puffer selbst zu GLB umbauen (data:-URIs sind im Artefakt gesperrt)
 fetch('aether_v7.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(g => {
   // alle eingebetteten Puffer zu einem BIN-Block zusammenfassen
@@ -548,7 +664,7 @@ function pick(n) {
   selected = selected === n ? null : n;
   document.querySelectorAll('#list li, #cables li').forEach(li => li.classList.toggle('on', li.dataset.n === selected));
   const sel = document.getElementById('sel');
-  sel.hidden = !selected; sel.textContent = (selected || '').replace(/^[KS]:/, '');
+  sel.hidden = !selected; sel.dataset.de = (selected || '').replace(/^[KS]:/, ''); sel.textContent = T(sel.dataset.de);
   if (selected) parts[selected].forEach(m => m.material.emissive.setHex(0x662200));
 }
 const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(); let down = null;
@@ -583,7 +699,7 @@ canvas.addEventListener('pointerup', e => {
   ray.setFromCamera(mouse, camera);
   const pool = Object.values(parts).flat().concat(cables).filter(m => m.visible);
   const hit = ray.intersectObjects(pool, false)[0];
-  if (hit) { const u = hit.object.userData; pick(u.grp === 'kabel' ? u.key : 'S:' + u.name); document.getElementById('sel').textContent = u.grp === 'kabel' ? u.key.slice(2) : u.grp2 + ' · ' + u.name; }
+  if (hit) { const u = hit.object.userData; pick(u.grp === 'kabel' ? u.key : 'S:' + u.name); const sl = document.getElementById('sel'); sl.dataset.de = u.grp === 'kabel' ? u.key.slice(2) : u.grp2 + ' · ' + u.name; sl.textContent = T(sl.dataset.de); }
 });
 
 function lid(mode) {
@@ -602,6 +718,10 @@ document.getElementById('cabOff').onclick = () => alle('cables', false);
 document.getElementById('allOn').onclick = () => alle('list', true);
 document.getElementById('allOff').onclick = () => alle('list', false);
 ['Iso', 'Top', 'Front', 'Right'].forEach(k => document.getElementById('v' + k).onclick = () => view(k.toLowerCase()));
+
+statisch(); sprache(LANG);
+document.getElementById('lgEN').onclick = () => sprache('en');
+document.getElementById('lgDE').onclick = () => sprache('de');
 
 (function loop(now) { controls.update(); oledZeichnen(now || 0); renderer.render(scene, camera); requestAnimationFrame(loop); })();
 </script>

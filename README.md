@@ -99,14 +99,14 @@ The Si4713 runs at its minimum power (88 dBµV), and the attenuator brings the l
 - The front exposes only the USB-C port.
 - The IR receiver looks through a window in the side wall.
 - The attenuator chain lies in open V-supports with cable-tie tunnels, which absorb tolerances.
-- The F socket sits high enough for the Si4713 board to fit underneath.
+- The Si4713 board sits behind the attenuator chain, not underneath the F plug, so there's room for the coax and the wires.
 
 **Printing:**
 - PLA, 0.2 mm layers, 3 walls, 15–20 % infill, no supports.
 - Print the lid upside down.
 - The base has a 3 mm floor and a chamfered bottom edge against warping.
 
-**Heat-set inserts:** M2, holes Ø 2.9 × 5 mm in Ø 6.8 mm bosses. Press them in with a soldering iron at about 220 °C.
+**Heat-set inserts:** M2 (≈3.2 mm OD, up to 6 mm long). The holes are Ø 3.2 × 6 mm with a Ø 3.6 lead-in, plus a wider Ø 3.6 pocket below the insert so displaced PLA has room and doesn't clog the hole. The bosses are Ø 6.8 mm. Press the inserts in with a soldering iron at about 220 °C.
 
 | Preview | |
 | --- | --- |
