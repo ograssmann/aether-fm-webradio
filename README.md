@@ -98,7 +98,7 @@ The Si4713 runs at its minimum power (88 dBµV), and the attenuator brings the l
 - The Pi sits on towers and is screwed from above.
 - The front exposes only the USB-C port.
 - The IR receiver looks through a window in the side wall.
-- The attenuator chain lies in open V-supports with cable-tie tunnels, which absorb tolerances.
+- The single 10 dB attenuator lies in an open V-support with a cable-tie tunnel, which absorbs tolerances. The space in front of it is kept free for the long black F plug.
 - The Si4713 board sits behind the attenuator chain, not underneath the F plug, so there's room for the coax and the wires.
 
 **Printing:**

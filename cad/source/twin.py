@@ -52,15 +52,14 @@ for n, m, c in (T_.place(T_.raspberry_pi5(), BX, BY, BZ0) + T_.place(T_.active_c
 Cy("Taster", TA_X, -2.0, 22.0, TA_Z, 6.0, SILVER)
 Cy("Taster Mutter", TA_X, W, W + 2.5, TA_Z, 8.0, SILVER, 6)
 
-# --- Antennenkette: F-Durchfuehrung -> 20 dB -> 10 dB -> F-Stecker ---
+# --- Antennenkette (wie gebaut): F-Durchfuehrung -> 10 dB -> F-Stecker mit langer schwarzer Tuelle ---
 Cx("F-Durchfuehrung", EX - 16.0, EX + 8.0, CH_Y, CH_Z, 4.7, SILVER)
 Cx("F-Mutter innen", EX - W - 3.0, EX - W, CH_Y, CH_Z, 6.4, SILVER, 6)
-Cx("Daempfer 20 dB", 165.0, 193.0, CH_Y, CH_Z, 5.3, SILVER)
-Cx("Daempfer Sechskant", 161.5, 166.0, CH_Y, CH_Z, 6.35, SILVER, 6)
-Cx("Daempfer 10 dB", 134.0, 162.0, CH_Y, CH_Z, 5.3, SILVER)
 Cx("Daempfer Sechskant", 192.0, 199.5, CH_Y, CH_Z, 6.35, SILVER, 6)
-Cx("F-Stecker", 122.0, 134.0, CH_Y, CH_Z, 5.0, GOLD)
-Cx("F-Stecker Tuelle", 104.0, 122.0, CH_Y, CH_Z, 4.6, BLACK)
+Cx("Daempfer 10 dB", 165.0, 193.0, CH_Y, CH_Z, 5.3, SILVER)
+Cx("Daempfer Sechskant", 161.5, 166.0, CH_Y, CH_Z, 6.35, SILVER, 6)
+Cx("F-Stecker", 151.0, 162.0, CH_Y, CH_Z, 5.0, GOLD)
+Cx("F-Stecker Tuelle", 120.0, 151.0, CH_Y, CH_Z, 4.8, BLACK)
 
 # --- Dupont-Kabel (Buchse-Buchse) an 90-Grad-Stiftleisten ---
 DUP = {"schwarz": [20, 20, 20, 255], "weiss": [245, 245, 245, 255], "lila": [140, 60, 200, 255], "blau": [30, 90, 230, 255],
@@ -153,10 +152,10 @@ for i in range(0, 3 * 24 + 1):
 rolle += [(cx_ - 20, cy_ + 10, F + 3), (k2[0] - 6, k2[1] - 2, k2[2] - 3), k2]
 kabel_teile.append((KL, kabel_mesh(rolle, 1.6), SCHWARZ))
 KABEL.append(("schwarz", None, None, "Klinkenkabel 3,5 mm: DAC (gruen) -> Si4713 Audio"))
-# Antennen-Koax: vom Ende der Kette (F-Stecker-Tuelle) in einer Schlaufe zum ANT-Loetpunkt am Modulende (+x, vorne)
+# Antennen-Koax: vom Ende der schwarzen F-Stecker-Tuelle in einer Schlaufe zum ANT-Loetpunkt am Modulende (+x, vorne)
 KO = "Kabel braun: Antennen-Koax: F-Stecker -> Si4713 ANT (Seele) / GND (Schirm)"
 ant = (SX0 + 36.5, CH_Y - 15.0 + 2.7, MOD_Z + 1.9)
-koax = [(104.0, CH_Y, CH_Z), (103.0, CH_Y - 3, CH_Z - 4), (102.0, CH_Y - 8, CH_Z - 10), (ant[0] + 4, ant[1] - 3, MOD_Z + 7),
+koax = [(120.0, CH_Y, CH_Z), (116.0, CH_Y - 2, CH_Z - 3), (110.0, CH_Y - 6, CH_Z - 10), (ant[0] + 5, ant[1] - 2, MOD_Z + 7),
         (ant[0] + 1.5, ant[1] - 1, ant[2] + 2.5), ant]
 kabel_teile.append((KO, kabel_mesh(koax, 1.3), [120, 80, 60, 255]))
 KABEL.append(("braun", None, None, "Antennen-Koax: F-Stecker -> Si4713 ANT (Seele) / GND (Schirm)"))

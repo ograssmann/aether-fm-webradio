@@ -69,7 +69,7 @@ base = base.subtract(rrect(-1, -1, EX + 1, EY + 1, FUGE_Z - 0.5, FUGE_Z + 0.5, R
 CH_Y = EY - W - 14.0          # Achse Daempfer-Kette und Modul-Mitte (Reihe an der Rueckwand)
 CH_Z = F + 22.0               # V7: Kette hoch, darunter hat das Si4713-Modul Platz
 CH_R = 6.4                    # Radius Mulde in den Saetteln
-SADDLES = [EX - 67.0, EX - 36.0]   # V7: Wiegen mittig unter den beiden Daempferkoerpern (aus Foto)
+SADDLES = [EX - 36.0]   # V7h: nur noch 1 Daempfer (10 dB) -> 1 Wiege darunter; vorne frei fuer den schwarzen F-Stecker
 CLIP_D = 10.8                      # Innen-Ø der Klemmwiege = Daempferkoerper (bitte nachmessen)
 CHAIN_L, PIGTAIL, MOD_L = 110.0, 5.0, 40.0    # Laenge Durchfuehrung+2 Daempfer+F-Stecker, Abstand zum Modul, Modul (Langloch +-6 mm zum Anpassen)
 MOD_X0 = EX - W - CHAIN_L - 8.0 - 30.0   # V7g: Modul 30 mm weiter nach hinten, nicht mehr unter dem F-Stecker (war zu eng); Loecher bei MOD_X0 und +MOD_DX
