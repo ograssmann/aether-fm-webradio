@@ -25,7 +25,7 @@ Internet ─► Raspberry Pi 5 (moOde) ─► Sabrent USB DAC ─3.5 mm─► Si
                     └ J2 ← push button
 ```
 
-The Si4713 runs at its minimum power (88 dBµV), and the attenuator brings the level down further. The signal goes into the receiver by cable and is not meant to be radiated.
+The Si4713 runs at its minimum power (88 dBµV), and the attenuator brings the level down further. The signal goes into the receiver by cable and is not meant to be radiated. See the [Disclaimer](#disclaimer): operating an FM transmitter may require approval.
 
 ## Bill of materials
 
@@ -228,9 +228,11 @@ Logs on the Pi: `journalctl -u fm -f`
 
 Serve the folder over HTTP (for example `python3 -m http.server` inside `twin/`) or enable GitHub Pages, because it loads `aether_v7.json`.
 
-## Legal note
+## Disclaimer
 
-FM transmitters are regulated (in Switzerland by BAKOM/OFCOM, elsewhere by the national authority). This project feeds the signal **by cable** into a single receiver, at minimum power and behind an attenuator, and switches the carrier off when silent. It is your responsibility to make sure your build and frequency comply with local rules.
+> **Operating an FM transmitter may require approval.** In many countries, including Switzerland (BAKOM/OFCOM), the EU, the UK and the US (FCC), transmitting on the FM band is regulated and may need a licence or approval. It may also be prohibited altogether, even at very low power or over a cable. Check the rules that apply where you live **before** building or operating this device, and choose a frequency that does not interfere with licensed broadcasters.
+
+This project is published for **information and educational purposes only**. It is provided **"as is", without any warranty**. The author accepts **no responsibility or liability** for any damage, injury, interference, legal consequences, fines or other losses arising from building, modifying or operating it. Working with mains-powered equipment, soldering and RF electronics is at your own risk. By using any part of this project, you accept full responsibility for its use and for compliance with all applicable laws and regulations.
 
 ## Licence
 
