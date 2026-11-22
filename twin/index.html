@@ -1,0 +1,607 @@
+<title>ÆTHER 102.3 Twin</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: full-height 3D viewport, slim control rail on the left (stacks on top on phones) */
+:root {
+  --bg: #eef0f2; --panel: #ffffff; --fg: #1d2126; --muted: #5d6670; --line: #d5dae0;
+  --accent: #c8102e; --stage: #dfe3e8;
+  --f-ui: "IBM Plex Sans", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121417; --panel: #1a1d21; --fg: #e6e9ed; --muted: #98a1ab; --line: #2c3138; --accent: #ff4d5e; --stage: #16191d; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #121417; --panel: #1a1d21; --fg: #e6e9ed; --muted: #98a1ab; --line: #2c3138; --accent: #ff4d5e; --stage: #16191d; color-scheme: dark }
+[hidden] { display: none !important; }
+#rc { position: absolute; left: max(10px, env(safe-area-inset-left, 0px)); top: 10px; max-height: calc(100% - 70px); overflow-y: auto;
+  width: 150px; background: #151515; border-radius: 18px; padding: 10px 12px 12px; box-shadow: 0 6px 20px rgb(0 0 0 / .35); color: #eee; }
+.rc-kopf { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+#rc-led { width: 8px; height: 8px; border-radius: 50%; background: #3a1010; }
+#rc-led.an { background: #ff3030; box-shadow: 0 0 8px #ff3030; }
+#rc-zu { border: 0; color: #888; padding: 0 4px; font-size: 14px; }
+#rc button { border-radius: 50%; }
+.rc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; justify-items: center; }
+.rc-grid button { width: 34px; height: 34px; padding: 0; background: #fafafa; color: #111; font: 700 14px var(--f-ui); border: 2px solid #222; box-shadow: 0 0 0 2px #fafafa; }
+#rc button.rot { background: #e0342b; color: #111; box-shadow: 0 0 0 2px #fafafa; }
+.rc-kreuz { display: grid; grid-template: repeat(3, 34px) / repeat(3, 34px); gap: 3px; justify-content: center; margin-top: 12px; }
+.rc-kreuz button { width: 34px; height: 34px; padding: 0; color: #111; font: 700 12px var(--f-ui); border: 0; }
+.rc-kreuz .bl { background: #2a8fe0; box-shadow: 0 0 0 2px #fafafa; }
+.rc-kreuz .up { grid-area: 1 / 2; } .rc-kreuz .le { grid-area: 2 / 1; } .rc-kreuz .ok { grid-area: 2 / 2; } .rc-kreuz .ri { grid-area: 2 / 3; } .rc-kreuz .dn { grid-area: 3 / 2; }
+#rc button:active { transform: scale(.92); }
+.rc-legende { margin-top: 10px; font: 10px/1.4 var(--f-mono); color: #bbb; }
+.rc-legende b { color: #fff; font-weight: 600; }
+#rc.zu #rc-body { display: none; } #rc.zu { width: auto; }
+
+.faults { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.faults button { font-size: 12px; padding: 5px 6px; text-align: left; }
+.sub { font-size: 11px; color: var(--muted); align-self: center; margin-right: 4px; }
+#log { margin: 0; padding: 6px 8px 6px 24px; max-height: 150px; overflow-y: auto; font: 11px/1.45 var(--f-mono); color: var(--muted);
+  border: 1px solid var(--line); border-radius: 6px; }
+#log li.neu { color: var(--fg); }
+#inst { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: max(52px, calc(env(safe-area-inset-bottom, 0px) + 52px));
+  display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 24px); }
+#inst figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 6px 4px; }
+#inst canvas { display: block; width: 176px; height: 104px; }
+#inst canvas#cpuv { width: 240px; }
+#inst figcaption { font: 11px var(--f-mono); color: var(--muted); text-align: center; margin-top: 2px; }
+#werte { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 4px; font: 12px var(--f-mono); min-width: 150px; }
+#werte div.trenn { border-top: 1px solid var(--line); padding-top: 4px; margin-top: 2px; }
+#werte div { display: flex; justify-content: space-between; gap: 10px; } #werte dt { color: var(--muted); } #werte dd { margin: 0; font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) { #inst canvas { width: 132px; height: 78px; } #werte { min-width: 0; } }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-ui); display: flex; overflow: hidden; }
+aside { width: 260px; flex: none; background: var(--panel); border-right: 1px solid var(--line);
+  padding-block: 18px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px;
+  display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+h1 { font-size: 20px; margin: 0; letter-spacing: .02em; text-wrap: balance; }
+.sub { color: var(--muted); font-size: 12px; margin-top: 4px; font-family: var(--f-mono); }
+.grp { display: flex; flex-direction: column; gap: 8px; }
+.lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.row { display: flex; gap: 6px; flex-wrap: wrap; }
+button { font: 500 13px var(--f-ui); color: var(--fg); background: transparent; border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+button[aria-pressed="true"], button[aria-checked="true"] { border-color: var(--accent); color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 4px; cursor: pointer; }
+li:hover, li.on { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+#cables li { align-items: flex-start; font-size: 12px; }
+#cables li i, #cables li input { margin-top: 2px; }
+input.sw { margin: 0; accent-color: var(--accent); flex: none; cursor: pointer; }
+li span { cursor: pointer; }
+ul.subs { margin-left: 22px; }
+ul.subs li { font-size: 12px; padding: 2px 6px; }
+button.auf { border: 0; padding: 0 2px; width: 16px; font-size: 12px; color: var(--muted); }
+#list > li:not(:has(button.auf)) { padding-left: 28px; }
+li i { width: 10px; height: 10px; border-radius: 2px; flex: none; border: 1px solid var(--line); }
+main { flex: 1; position: relative; min-width: 0; background: var(--stage); }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#tip { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  font: 12px var(--f-mono); color: var(--muted); background: var(--panel); border: 1px solid var(--line); padding: 6px 10px; border-radius: 6px; }
+#sel { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); top: 12px; font: 500 13px var(--f-mono);
+  background: var(--panel); border: 1px solid var(--line); padding: 6px 10px; border-radius: 6px; }
+#load { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-family: var(--f-mono); }
+@media (max-width: 720px) {
+  body { flex-direction: column; }
+  aside { width: auto; border-right: 0; border-bottom: 1px solid var(--line); max-height: 42%; padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+}
+</style>
+
+<aside>
+  <div><h1>ÆTHER 102.3</h1><div class="sub">Gehäuse V7 · 215 × 95,5 × 42 mm</div></div>
+  <div class="grp"><span class="lbl">Deckel</span>
+    <div class="row">
+      <button id="lidOn" aria-pressed="true">aufgesetzt</button>
+      <button id="lidUp" aria-pressed="false">abgehoben</button>
+      <button id="lidOff" aria-pressed="false">aus</button>
+    </div>
+  </div>
+  <div class="grp"><label class="lbl" for="glass">Gehäuse-Transparenz</label>
+    <input id="glass" type="range" min="0" max="90" value="0">
+  </div>
+  <div class="grp"><span class="lbl">Ansicht</span>
+    <div class="row">
+      <button id="vIso">Iso</button><button id="vTop">Oben</button><button id="vFront">Vorne</button><button id="vRight">Rechts</button>
+    </div>
+  </div>
+  <div class="grp"><span class="lbl">Test: Fehlerfälle</span>
+    <div class="faults" id="faults" role="radiogroup" aria-label="Fehlerfall"></div>
+    <div class="row" role="group" aria-label="Zeitraffer">
+      <span class="sub">Zeitraffer</span><button data-sp="1">1×</button><button data-sp="10" aria-pressed="true">10×</button><button data-sp="60">60×</button>
+    </div>
+    <ol id="log" aria-live="polite"></ol>
+  </div>
+  <div class="grp"><span class="lbl">Kabel</span>
+    <div class="row"><button id="cabOn">alle an</button><button id="cabOff">alle aus</button></div>
+    <ul id="cables"></ul>
+  </div>
+  <div class="grp"><span class="lbl">Bauteile</span>
+    <div class="row"><button id="allOn">alle an</button><button id="allOff">alle aus</button></div>
+    <ul id="list"></ul>
+  </div>
+</aside>
+<main>
+  <canvas id="c"></canvas>
+  <div id="sel" hidden></div>
+  <div id="rc" aria-label="Fernbedienung">
+    <div class="rc-kopf"><span id="rc-led"></span><button id="rc-zu" aria-label="Fernbedienung einklappen">–</button></div>
+    <div id="rc-body">
+      <div class="rc-grid">
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+        <button data-k="*" class="rot">*</button><button data-k="0">0</button><button data-k="#" class="rot">#</button>
+      </div>
+      <div class="rc-kreuz">
+        <button data-k="up" class="bl up" aria-label="hoch">▲</button><button data-k="left" class="bl le" aria-label="links">◀</button>
+        <button data-k="ok" class="rot ok">OK</button><button data-k="right" class="bl ri" aria-label="rechts">▶</button>
+        <button data-k="down" class="bl dn" aria-label="runter">▼</button>
+      </div>
+      <div class="rc-legende"><b>OK</b> Start/Stop · <b>▲▼</b> Lautstärke ±2 % · <b>◀▶</b> Sender · <b>1–5</b> Favoriten · <b>0</b> Systeminfo · <b>Taster am Gehäuse</b> (im 3D anklicken): kurz = Start/Stop bzw. Einschalten, 5 s halten = Ausschalten</div>
+    </div>
+  </div>
+  <div id="tip">Ziehen = drehen · Rad / Pinch = zoomen · Rechtsklick = verschieben · Klick = Bauteil</div>
+  <div id="load">Modell wird geladen …</div>
+  <div id="inst">
+    <figure><canvas id="vu" width="220" height="130" aria-label="VU-Meter Ausgang"></canvas><figcaption>Ausgang UKW (Audiopegel)</figcaption></figure>
+    <figure><canvas id="volt" width="220" height="130" aria-label="Voltmeter Pi-Eingang"></canvas><figcaption>Pi 5 Eingangsspannung</figcaption></figure>
+    <figure><canvas id="cpuv" width="300" height="130" aria-label="CPU-Auslastung über die Zeit"></canvas><figcaption>CPU-Auslastung · letzte 3 min</figcaption></figure>
+    <dl id="werte"><div><dt>Träger</dt><dd id="w-tr">an</dd></div><div><dt>moOde</dt><dd id="w-vol">62 %</dd></div>
+      <div><dt>HF am B&amp;O</dt><dd id="w-hf">–</dd></div><div><dt>Sim-Zeit</dt><dd id="w-t">0:00</dd></div>
+      <div class="trenn"><dt>CPU</dt><dd id="w-cpu">–</dd></div><div><dt>RAM</dt><dd id="w-ram">–</dd></div>
+      <div><dt>Temperatur</dt><dd id="w-temp">–</dd></div><div><dt>Lüfter</dt><dd id="w-fan">–</dd></div>
+      <div><dt>WLAN</dt><dd id="w-dbm">–</dd></div><div><dt>Laufzeit</dt><dd id="w-up">–</dd></div></dl>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+const EX = 215, EY = 95.5, EZ = 42;
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 0.9));
+const sun = new THREE.DirectionalLight(0xffffff, 0.8); sun.position.set(200, 400, 300); scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(-300, 100, -200); scene.add(fill);
+const root = new THREE.Group(); root.rotation.x = -Math.PI / 2; root.position.set(-EX / 2, 0, EY / 2); scene.add(root);
+const center = new THREE.Vector3(0, EZ / 2, 0);
+
+function size() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(r.height, 1); camera.updateProjectionMatrix();
+}
+new ResizeObserver(size).observe(canvas.parentElement);
+function view(dir) {
+  const d = dir === 'iso' ? 380 : 520, v = { iso: [1, 0.9, 1.15], top: [0, 1, 0.001], front: [0, 0.15, 1], right: [1, 0.15, 0] }[dir];
+  camera.position.set(center.x + v[0] * d * 0.6, center.y + v[1] * d * 0.6, center.z + v[2] * d * 0.6);
+  controls.target.copy(center); controls.update();
+}
+size(); view('iso');
+
+const META = [{"g": "gehaeuse", "n": "Unterteil", "c": "#46464a"}, {"g": "teil", "n": "Seitendeckel (Rastdeckel Pi-Fenster)", "c": "#37373c"}, {"g": "deckel", "n": "Deckel", "c": "#161618"}, {"g": "deckel", "n": "Schrift", "c": "#ebebeb"}, {"g": "teil", "n": "Pi 5 Platine", "c": "#186e3a"}, {"g": "teil", "n": "Pi Befestigungsloch", "c": "#d6b046"}, {"g": "teil", "n": "Pi Befestigungsloch", "c": "#d6b046"}, {"g": "teil", "n": "Pi Befestigungsloch", "c": "#d6b046"}, {"g": "teil", "n": "Pi Befestigungsloch", "c": "#d6b046"}, {"g": "teil", "n": "Pi USB-C (Strom)", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi USB-C Oeffnung", "c": "#121214"}, {"g": "teil", "n": "Pi micro-HDMI 0", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi micro-HDMI 0", "c": "#121214"}, {"g": "teil", "n": "Pi micro-HDMI 1", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi micro-HDMI 1", "c": "#121214"}, {"g": "teil", "n": "Pi UART (JST)", "c": "#ecece6"}, {"g": "teil", "n": "Pi CAM/DISP 0", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi CAM/DISP 0", "c": "#26262a"}, {"g": "teil", "n": "Pi CAM/DISP 1", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi CAM/DISP 1", "c": "#26262a"}, {"g": "teil", "n": "Pi SoC BCM2712", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi RAM", "c": "#121214"}, {"g": "teil", "n": "Pi RP1", "c": "#121214"}, {"g": "teil", "n": "Pi PMIC", "c": "#121214"}, {"g": "teil", "n": "Pi WLAN-Modul", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi PCIe (FPC)", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi Power-Knopf", "c": "#26262a"}, {"g": "teil", "n": "Pi Power-Knopf", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi LED rot (PWR)", "c": "#e61e28"}, {"g": "teil", "n": "Pi LED gruen (ACT)", "c": "#28c850"}, {"g": "teil", "n": "Pi RTC-Batterie (J5)", "c": "#ecece6"}, {"g": "teil", "n": "Pi J2 Power-Taster (2 Stifte nachgeruestet)", "c": "#121214"}, {"g": "teil", "n": "Pi J2 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi J2 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi PoE-Stifte", "c": "#121214"}, {"g": "teil", "n": "Pi PoE-Stifte", "c": "#d6b046"}, {"g": "teil", "n": "Pi PoE-Stifte", "c": "#d6b046"}, {"g": "teil", "n": "Pi PoE-Stifte", "c": "#d6b046"}, {"g": "teil", "n": "Pi PoE-Stifte", "c": "#d6b046"}, {"g": "teil", "n": "Pi Luefter-Anschluss (FAN)", "c": "#ecece6"}, {"g": "teil", "n": "Pi Ethernet", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi Ethernet Buchse", "c": "#121214"}, {"g": "teil", "n": "Pi USB-A 3.0", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi USB-A Oeffnung", "c": "#121214"}, {"g": "teil", "n": "Pi USB-A Zunge", "c": "#1e6edc"}, {"g": "teil", "n": "Pi USB-A Oeffnung", "c": "#121214"}, {"g": "teil", "n": "Pi USB-A Zunge", "c": "#1e6edc"}, {"g": "teil", "n": "Pi USB-A 2.0", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi USB-A Oeffnung", "c": "#121214"}, {"g": "teil", "n": "Pi USB-A Zunge", "c": "#121214"}, {"g": "teil", "n": "Pi USB-A Oeffnung", "c": "#121214"}, {"g": "teil", "n": "Pi USB-A Zunge", "c": "#121214"}, {"g": "teil", "n": "Pi GPIO-Leiste", "c": "#121214"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi GPIO-Stift", "c": "#d6b046"}, {"g": "teil", "n": "Pi microSD-Halter", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi microSD-Karte", "c": "#282878"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#26262a"}, {"g": "teil", "n": "Pi SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Active Cooler Grundplatte", "c": "#46484e"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Rippen", "c": "#505258"}, {"g": "teil", "n": "Active Cooler Luefter-Gehaeuse", "c": "#121214"}, {"g": "teil", "n": "Active Cooler Luefter", "c": "#26262a"}, {"g": "teil", "n": "DAC USB-Stecker", "c": "#c4c7cc"}, {"g": "teil", "n": "DAC Gehaeuse (Sabrent)", "c": "#121214"}, {"g": "teil", "n": "DAC Klinke Kopfhoerer", "c": "#78c846"}, {"g": "teil", "n": "DAC Klinke", "c": "#121214"}, {"g": "teil", "n": "DAC Klinke Mikrofon", "c": "#f078aa"}, {"g": "teil", "n": "DAC Klinke", "c": "#121214"}, {"g": "teil", "n": "OLED Platine", "c": "#1946a0"}, {"g": "teil", "n": "OLED Glas", "c": "#282c34"}, {"g": "teil", "n": "OLED Anzeigeflaeche", "c": "#0a0c10"}, {"g": "teil", "n": "OLED Flexkabel", "c": "#be8c28"}, {"g": "teil", "n": "OLED Stiftleiste (90 Grad)", "c": "#121214"}, {"g": "teil", "n": "OLED Stift", "c": "#d6b046"}, {"g": "teil", "n": "OLED Stift", "c": "#d6b046"}, {"g": "teil", "n": "OLED Stift", "c": "#d6b046"}, {"g": "teil", "n": "OLED Stift", "c": "#d6b046"}, {"g": "teil", "n": "IR Platine (KY-022)", "c": "#161618"}, {"g": "teil", "n": "IR Empfaenger (Abschirmung)", "c": "#c4c7cc"}, {"g": "teil", "n": "IR Empfaenger Linse", "c": "#121214"}, {"g": "teil", "n": "IR LED", "c": "#e61e28"}, {"g": "teil", "n": "IR Widerstand", "c": "#26262a"}, {"g": "teil", "n": "IR Stiftleiste (90 Grad)", "c": "#121214"}, {"g": "teil", "n": "IR Stift", "c": "#d6b046"}, {"g": "teil", "n": "IR Stift", "c": "#d6b046"}, {"g": "teil", "n": "IR Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 FM-Modul", "c": "#692d96"}, {"g": "teil", "n": "Si4713 Klinkenbuchse 3,5 mm", "c": "#121214"}, {"g": "teil", "n": "Si4713 Klinkenbuchse", "c": "#121214"}, {"g": "teil", "n": "Si4713 ANT-Loetpunkt", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 Chip", "c": "#121214"}, {"g": "teil", "n": "Si4713 Quarz", "c": "#c4c7cc"}, {"g": "teil", "n": "Si4713 Spannungsregler", "c": "#121214"}, {"g": "teil", "n": "Si4713 Stiftleiste (11-pol.)", "c": "#121214"}, {"g": "teil", "n": "Si4713 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 Stift", "c": "#d6b046"}, {"g": "teil", "n": "Si4713 SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Si4713 SMD", "c": "#26262a"}, {"g": "teil", "n": "Si4713 SMD", "c": "#26262a"}, {"g": "teil", "n": "Si4713 SMD", "c": "#26262a"}, {"g": "teil", "n": "Si4713 SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Si4713 SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Si4713 SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Si4713 SMD", "c": "#26262a"}, {"g": "teil", "n": "Si4713 SMD", "c": "#26262a"}, {"g": "teil", "n": "Si4713 SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Si4713 SMD", "c": "#26262a"}, {"g": "teil", "n": "Si4713 SMD", "c": "#c4c7cc"}, {"g": "teil", "n": "Si4713 SMD", "c": "#e2d6ba"}, {"g": "teil", "n": "Si4713 SMD", "c": "#26262a"}, {"g": "teil", "n": "Taster", "c": "#c8cace"}, {"g": "teil", "n": "Taster Mutter", "c": "#c8cace"}, {"g": "teil", "n": "F-Durchfuehrung", "c": "#c8cace"}, {"g": "teil", "n": "F-Mutter innen", "c": "#c8cace"}, {"g": "teil", "n": "Daempfer 20 dB", "c": "#c8cace"}, {"g": "teil", "n": "Daempfer Sechskant", "c": "#c8cace"}, {"g": "teil", "n": "Daempfer 10 dB", "c": "#c8cace"}, {"g": "teil", "n": "Daempfer Sechskant", "c": "#c8cace"}, {"g": "teil", "n": "F-Stecker", "c": "#d4af37"}, {"g": "teil", "n": "F-Stecker Tuelle", "c": "#19191c"}, {"g": "kabel", "n": "Buchse rot: Pi 1 (3,3 V) -> Si4713 Vin", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse rot: Pi 1 (3,3 V) -> Si4713 Vin", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel rot: Pi 1 (3,3 V) -> Si4713 Vin", "c": "#dc141e"}, {"g": "kabel", "n": "Buchse schwarz: Pi 6 (GND) -> Si4713 GND", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse schwarz: Pi 6 (GND) -> Si4713 GND", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel schwarz: Pi 6 (GND) -> Si4713 GND", "c": "#141414"}, {"g": "kabel", "n": "Buchse blau: Pi 3 (SDA) -> Si4713 SDA", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse blau: Pi 3 (SDA) -> Si4713 SDA", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel blau: Pi 3 (SDA) -> Si4713 SDA", "c": "#1e5ae6"}, {"g": "kabel", "n": "Buchse gelb: Pi 5 (SCL) -> Si4713 SCL", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse gelb: Pi 5 (SCL) -> Si4713 SCL", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel gelb: Pi 5 (SCL) -> Si4713 SCL", "c": "#fad200"}, {"g": "kabel", "n": "Buchse gruen: Pi 29 (GPIO 5) -> Si4713 RST", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse gruen: Pi 29 (GPIO 5) -> Si4713 RST", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel gruen: Pi 29 (GPIO 5) -> Si4713 RST", "c": "#14aa3c"}, {"g": "kabel", "n": "Buchse orange: Pi 17 (3,3 V) -> OLED VCC", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse orange: Pi 17 (3,3 V) -> OLED VCC", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel orange: Pi 17 (3,3 V) -> OLED VCC", "c": "#ff8200"}, {"g": "kabel", "n": "Buchse schwarz: Pi 9 (GND) -> OLED GND", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse schwarz: Pi 9 (GND) -> OLED GND", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel schwarz: Pi 9 (GND) -> OLED GND", "c": "#141414"}, {"g": "kabel", "n": "Buchse lila: Pi 15 (GPIO 22, SDA Bus 3) -> OLED SDA", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse lila: Pi 15 (GPIO 22, SDA Bus 3) -> OLED SDA", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel lila: Pi 15 (GPIO 22, SDA Bus 3) -> OLED SDA", "c": "#8c3cc8"}, {"g": "kabel", "n": "Buchse braun: Pi 13 (GPIO 27, SCL Bus 3) -> OLED SCK", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse braun: Pi 13 (GPIO 27, SCL Bus 3) -> OLED SCK", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel braun: Pi 13 (GPIO 27, SCL Bus 3) -> OLED SCK", "c": "#78461e"}, {"g": "kabel", "n": "Buchse weiss: Pi 16 (GPIO 23) -> IR S", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse weiss: Pi 16 (GPIO 23) -> IR S", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel weiss: Pi 16 (GPIO 23) -> IR S", "c": "#f5f5f5"}, {"g": "kabel", "n": "Buchse rot: Pi 18 (GPIO 24 = 3,3 V) -> IR +", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse rot: Pi 18 (GPIO 24 = 3,3 V) -> IR +", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel rot: Pi 18 (GPIO 24 = 3,3 V) -> IR +", "c": "#dc141e"}, {"g": "kabel", "n": "Buchse schwarz: Pi 20 (GND) -> IR -", "c": "#0f0f0f"}, {"g": "kabel", "n": "Buchse schwarz: Pi 20 (GND) -> IR -", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel schwarz: Pi 20 (GND) -> IR -", "c": "#141414"}, {"g": "kabel", "n": "Buchse weiss: J2 -> Taster (Polung egal)", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel weiss: J2 -> Taster (Polung egal)", "c": "#f5f5f5"}, {"g": "kabel", "n": "Buchse weiss: J2 -> Taster (Polung egal)", "c": "#0f0f0f"}, {"g": "kabel", "n": "Kabel weiss: J2 -> Taster (Polung egal)", "c": "#f5f5f5"}, {"g": "kabel", "n": "Kabel schwarz: Klinkenkabel 3,5 mm: DAC (gruen) -> Si4713 Audio", "c": "#c8cace"}, {"g": "kabel", "n": "Kabel schwarz: Klinkenkabel 3,5 mm: DAC (gruen) -> Si4713 Audio", "c": "#c8cace"}, {"g": "kabel", "n": "Kabel schwarz: Klinkenkabel 3,5 mm: DAC (gruen) -> Si4713 Audio", "c": "#19191c"}, {"g": "kabel", "n": "Kabel braun: Antennen-Koax: F-Stecker -> Si4713 ANT (Seele) / GND (Schirm)", "c": "#78503c"}];
+const KABEL = [{"farbe": "rot", "text": "Pi 1 (3,3 V) -> Si4713 Vin"}, {"farbe": "schwarz", "text": "Pi 6 (GND) -> Si4713 GND"}, {"farbe": "blau", "text": "Pi 3 (SDA) -> Si4713 SDA"}, {"farbe": "gelb", "text": "Pi 5 (SCL) -> Si4713 SCL"}, {"farbe": "gruen", "text": "Pi 29 (GPIO 5) -> Si4713 RST"}, {"farbe": "orange", "text": "Pi 17 (3,3 V) -> OLED VCC"}, {"farbe": "schwarz", "text": "Pi 9 (GND) -> OLED GND"}, {"farbe": "lila", "text": "Pi 15 (GPIO 22, SDA Bus 3) -> OLED SDA"}, {"farbe": "braun", "text": "Pi 13 (GPIO 27, SCL Bus 3) -> OLED SCK"}, {"farbe": "weiss", "text": "Pi 16 (GPIO 23) -> IR S"}, {"farbe": "rot", "text": "Pi 18 (GPIO 24 = 3,3 V) -> IR +"}, {"farbe": "schwarz", "text": "Pi 20 (GND) -> IR -"}, {"farbe": "weiss", "text": "J2 -> Taster (Polung egal)"}, {"farbe": "weiss", "text": "J2 -> Taster (Polung egal)"}, {"farbe": "schwarz", "text": "Klinkenkabel 3,5 mm: DAC (gruen) -> Si4713 Audio"}, {"farbe": "braun", "text": "Antennen-Koax: F-Stecker -> Si4713 ANT (Seele) / GND (Schirm)"}];
+const FARBE = {schwarz:'#141414', weiss:'#f5f5f5', lila:'#8c3cc8', blau:'#1e5ae6', gruen:'#14aa3c', gelb:'#fad200', orange:'#ff8200', rot:'#dc141e', braun:'#78461e'};
+function gruppe(n) {
+  if (/^(Kabel|Dupont)/.test(n)) return 'Kabel';
+  if (/^Active Cooler/.test(n)) return 'Active Cooler';
+  if (/^(F-|Daempfer)/.test(n)) return 'Antennenkette';
+  if (/^Pi J2/.test(n)) return 'J2 Power-Taster-Stifte';
+  if (/^Taster/.test(n)) return 'Taster';
+  if (/^Seitendeckel/.test(n)) return 'Seitendeckel (Pi-Fenster)';
+  return n.split(' ')[0].replace('Si4713', 'Si4713 FM-Modul').replace('Pi', 'Raspberry Pi 5').replace('DAC', 'USB-DAC').replace('IR', 'IR-Empfänger');
+}
+const lidGroup = [], shell = [], parts = {}, cables = [];
+let selected = null;
+function onModel(gltf) {
+  document.getElementById('load').hidden = true;
+  gltf.scene.traverse(o => {
+    if (!o.isMesh) return;
+    const md = META[parseInt((o.name || '').replace(/\D/g, ''), 10)] || { g: 'teil', n: o.name, c: '#999999' };
+    const grp = md.g, name = md.n, c = new THREE.Color(md.c);
+    o.material = new THREE.MeshStandardMaterial({ color: c, flatShading: true, roughness: grp === 'teil' ? 0.45 : 0.7,
+      metalness: /USB|Ethernet|HDMI|Daempfer|F-|Taster|Abschirmung|SoC|Quarz|Stift|Befestigung/.test(name) ? 0.55 : 0.05, transparent: true });
+    o.userData = { grp, name, base: c.clone() };
+    if (grp === 'deckel') lidGroup.push(o);
+    else if (grp === 'gehaeuse') { shell.push(o); o.userData.grp2 = 'Gehäuse (Unterteil)'; (parts['Gehäuse (Unterteil)'] = parts['Gehäuse (Unterteil)'] || []).push(o); }
+    else if (grp === 'kabel') { cables.push(o); o.userData.key = 'K:' + name.replace(/^(Kabel|Buchse) /, ''); (parts[o.userData.key] = parts[o.userData.key] || []).push(o); }
+    else { o.userData.grp2 = gruppe(name); (parts[o.userData.grp2] = parts[o.userData.grp2] || []).push(o); (parts['S:' + name] = parts['S:' + name] || []).push(o); }
+  });
+  root.add(gltf.scene);
+  oledStart();
+  const zeile = (ul, key, farbe, text) => {
+    const li = document.createElement('li'); li.dataset.n = key;
+    const id = 'sw' + ul.children.length + ul.id;
+    li.innerHTML = `<input type="checkbox" class="sw" id="${id}" checked aria-label="${text} anzeigen"><i style="background:${farbe}"></i><span>${text}</span>`;
+    li.querySelector('input').onchange = e => { parts[key].forEach(m => m.visible = e.target.checked); };
+    li.querySelector('span').onclick = () => pick(key);
+    ul.appendChild(li);
+  };
+  const ul = document.getElementById('list');
+  Object.keys(parts).filter(n => !/^[KS]:/.test(n)).forEach(n => {
+    zeile(ul, n, '#' + parts[n][0].userData.base.getHexString(), n);
+    const li = ul.lastChild, subs = [...new Set(parts[n].map(m => m.userData.name))].filter(x => parts['S:' + x]);
+    if (subs.length < 2) return;
+    const btn = document.createElement('button'); btn.className = 'auf'; btn.textContent = '▸'; btn.setAttribute('aria-label', n + ' aufklappen');
+    li.insertBefore(btn, li.firstChild);
+    const sub = document.createElement('ul'); sub.className = 'subs'; sub.id = 'sub' + ul.children.length; sub.hidden = true;
+    subs.forEach(x => zeile(sub, 'S:' + x, '#' + parts['S:' + x][0].userData.base.getHexString(), x.replace(/^(Pi|Si4713|OLED|IR|DAC|Active Cooler) /, '')));
+    btn.onclick = e => { e.stopPropagation(); sub.hidden = !sub.hidden; btn.textContent = sub.hidden ? '▸' : '▾'; };
+    li.querySelector('input').addEventListener('change', e => sub.querySelectorAll('input').forEach(cb => cb.checked = e.target.checked));
+    ul.appendChild(sub);
+  });
+  const cl = document.getElementById('cables');
+  KABEL.forEach(k => { const key = 'K:' + k.farbe + ': ' + k.text; if (parts[key]) zeile(cl, key, FARBE[k.farbe], k.text); });
+}
+function alle(ulId, an) {
+  document.querySelectorAll('#' + ulId + ' li').forEach(li => { const cb = li.querySelector('input'); cb.checked = an; (parts[li.dataset.n] || []).forEach(m => m.visible = an); });
+}
+
+// ---- Simulation von fm.py: Normalbetrieb, Fehlerfaelle und die Reaktion darauf (Zeiten wie in fm.py) ----
+let oled = null;
+function oledStart() {
+  const flaeche = Object.values(parts).flat().find(m => m.userData.name === 'OLED Anzeigeflaeche');
+  if (!flaeche) return;
+  flaeche.geometry.computeBoundingBox();
+  const bb = flaeche.geometry.boundingBox;
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 64;
+  const tex = new THREE.CanvasTexture(cv); tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.LinearFilter;
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(bb.max.x - bb.min.x, bb.max.y - bb.min.y), new THREE.MeshBasicMaterial({ map: tex }));
+  plane.position.set((bb.min.x + bb.max.x) / 2, (bb.min.y + bb.max.y) / 2, bb.max.z + 0.03);
+  root.add(plane);
+  parts[flaeche.userData.grp2].push(plane); plane.userData = flaeche.userData;
+  oled = { cv, ctx: cv.getContext('2d'), tex };
+}
+const SENDER = [['SRF 3', 'Coldplay - Yellow'], ['Radio Swiss Jazz', 'Miles Davis - So What'], ['Couleur 3', 'Daft Punk - Get Lucky'],
+  ['Radio Swiss Classic', 'Bach - Air'], ['SRF 1', 'Nachrichten']];
+const FAELLE = [
+  ['ok', 'Normalbetrieb'], ['wlan_schwach', 'WLAN schwach'], ['wlan_weg', 'WLAN / Internet weg'], ['clip', 'Zu laut (Clipping)'],
+  ['leise', 'Zu leise'], ['stream', 'Stream hängt'], ['pause', 'Pause (Stille)'], ['mpd', 'moOde antwortet nicht'],
+  ['i2c', 'I²C-Störung Sender'], ['fm_haengt', 'fm.py hängt'], ['system', 'System hängt'], ['heiss', 'Pi zu heiss'],
+  ['strom', 'Netzteil zu schwach']];
+const S = { station: 0, userStop: false, fall: 'ok', speed: 10, t: 0, vol: 62, phase: 'run', phaseBis: 0, anz: -30, spitze: -30, spitzeBis: 0, clipBis: 0,
+  offline: null, wlanNeu: false, mpdFail: 0, mpdNext: 0, mpdNeuAt: -999, autoLetzt: -99, fenster: 20, maxRel: -99,
+  stilleSeit: null, traeger: true, streamSeit: null, i2c: 0, i2cNext: 0, hangSeit: null, bootText: '', volt: 5.10, temp: 52,
+  meldung: null, meldungBis: 0, frozen: null, last: 0, wifi: 4, status: '' };
+function log(text) {
+  const ol = document.getElementById('log'), li = document.createElement('li');
+  const m = Math.floor(S.t / 60), sec = Math.floor(S.t % 60);
+  li.textContent = `${m}:${String(sec).padStart(2, '0')}  ${text}`; li.className = 'neu';
+  ol.prepend(li); [...ol.children].slice(1).forEach(x => x.className = ''); while (ol.children.length > 40) ol.lastChild.remove();
+}
+function melden(text, sek = 2.5) { S.meldung = text; S.meldungBis = performance.now() + sek * 1000; }   // Echtzeit, unabhaengig vom Zeitraffer
+function setFall(f) {
+  if (S.phase !== 'run' && f !== 'ok') return;
+  S.fall = f;
+  document.querySelectorAll('#faults button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.f === f)));
+  log('Test: ' + FAELLE.find(x => x[0] === f)[1]);
+  if (f === 'fm_haengt') { S.hangSeit = S.t; log('fm.py reagiert nicht mehr – Anzeige friert ein'); }
+  if (f === 'system') { S.hangSeit = S.t; log('Linux hängt – nichts reagiert mehr'); }
+  if (f === 'ok') { S.vol = Math.min(Math.max(S.vol, 55), 68); }
+}
+// ---- Bedienung: Fernbedienung und Taster (wie fm.py) ----
+const BELEGUNG = { ok: 'Start / Stop', up: 'Lauter (+2 %)', down: 'Leiser (−2 %)', right: 'Nächster Favorit', left: 'Vorheriger Favorit',
+  1: 'Favorit 1', 2: 'Favorit 2', 3: 'Favorit 3', 4: 'Favorit 4', 5: 'Favorit 5', 0: 'Systeminfo 10 s (CPU, RAM, Temp …)' };
+function taste(k) {
+  flashIR();
+  if (S.phase === 'off') { log(`Fernbedienung ${k}: Pi ist aus – nur der Taster schaltet ein`); return; }
+  if (S.phase !== 'run' || ['fm_haengt', 'system'].includes(S.fall)) { log(`Fernbedienung ${k}: keine Reaktion (${S.phase !== 'run' ? 'Pi startet' : 'hängt'})`); return; }
+  let txt;
+  if (k === 'ok') { S.userStop = !S.userStop; txt = S.userStop ? 'Stop' : 'Start'; }
+  else if (k === 'up') { S.vol = Math.min(100, S.vol + 2); txt = `Lautstaerke ${S.vol}%`; }
+  else if (k === 'down') { S.vol = Math.max(0, S.vol - 2); txt = `Lautstaerke ${S.vol}%`; }
+  else if (k === 'right' || k === 'left') { S.station = (S.station + (k === 'right' ? 1 : SENDER.length - 1)) % SENDER.length; S.userStop = false; txt = `${S.station + 1}/5 ${SENDER[S.station][0]}`; }
+  else if (k === '0') { S.infoBis = performance.now() > (S.infoBis || 0) ? performance.now() + 10000 : 0; log('Fernbedienung 0 → Systeminfo ' + (S.infoBis ? 'an (10 s)' : 'aus')); return; }
+  else if (/^[1-5]$/.test(k)) { S.station = +k - 1; S.userStop = false; txt = `${k}/5 ${SENDER[S.station][0]}`; }
+  else { txt = 'Taste nicht belegt'; }
+  melden(txt); log(`Fernbedienung ${k} → ${txt}`);
+}
+function tasterKurz() {
+  if (S.phase === 'off') { log('Taster kurz: Pi schaltet ein'); bootStart('Pi startet'); return; }
+  if (S.phase !== 'run') return;
+  S.userStop = !S.userStop; melden(S.userStop ? 'Stop' : 'Start'); log(`Taster kurz → ${S.userStop ? 'Stop' : 'Start'}`);
+}
+function tasterLang() {
+  if (S.phase === 'off') return;
+  log('Taster 5 s gehalten → Pi fährt herunter und schaltet aus'); S.phase = 'off'; S.traeger = false;
+}
+function flashIR() {
+  const led = document.getElementById('rc-led'); led.classList.add('an'); setTimeout(() => led.classList.remove('an'), 150);
+  const ir = parts['S:IR Empfaenger (Abschirmung)'];
+  if (ir) { ir.forEach(m => m.material.emissive.setHex(0x880000)); setTimeout(() => ir.forEach(m => m.material.emissive.setHex(0)), 200); }
+}
+function neustart(grund) { S.phase = 'countdown'; S.phaseBis = S.t + 10; S.bootText = grund; log('Neustart wegen: ' + grund); }
+function bootStart(text) { S.phase = 'boot'; S.phaseBis = S.t + 35; S.bootText = text; S.traeger = false; S.offline = null; S.wlanNeu = false;
+  S.mpdFail = 0; S.i2c = 0; S.hangSeit = null; S.frozen = null; }
+function simSchritt(dt) {
+  S.t += dt;
+  const f = S.fall;
+  // Spannung und Temperatur
+  const zielV = f === 'strom' ? 4.68 + 0.05 * Math.sin(S.t * 1.7) - (Math.random() < 0.05 ? 0.12 : 0) : 5.10 + 0.02 * Math.sin(S.t * 0.7);
+  S.volt += (zielV - S.volt) * Math.min(1, dt * 3);
+  S.temp += ((f === 'heiss' ? 83 : 52) - S.temp) * Math.min(1, dt * 0.1);
+  const cpuZiel = S.phase === 'boot' ? 85 : f === 'heiss' ? 92 : f === 'system' || f === 'fm_haengt' ? 100 : 9 + 6 * Math.abs(Math.sin(S.t / 9));
+  S.cpu = (S.cpu ?? 10) + (cpuZiel + (Math.random() - 0.5) * 4 - (S.cpu ?? 10)) * Math.min(1, dt);
+  S.ram = 38 + 2 * Math.sin(S.t / 300);
+  S.luefter = S.temp < 50 ? 0 : Math.round(1500 + (S.temp - 50) * 160);
+  S.dbm = f === 'wlan_weg' ? null : f === 'wlan_schwach' ? -79 : -57 + Math.round(2 * Math.sin(S.t / 13));
+  S.uptime = (S.uptime ?? 3 * 86400 + 4 * 3600) + dt; if (S.phase === 'boot') S.uptime = S.phaseBis - S.t > 0 ? 35 - (S.phaseBis - S.t) : 0;
+  if (S.phase === 'off') { S.traeger = false; return; }
+  if (S.phase === 'countdown') { if (S.t >= S.phaseBis) { bootStart('Pi startet'); log('Pi startet neu (ca. 35 s)'); } return; }
+  if (S.phase === 'boot') {
+    if (S.t >= S.phaseBis) { S.phase = 'run'; S.traeger = true;
+      if (['fm_haengt', 'system', 'i2c', 'mpd'].includes(f)) setFall('ok');
+      log('fm.py läuft – Sender an'); }
+    return;
+  }
+  if (S.phase === 'restart_fm') { if (S.t >= S.phaseBis) { S.phase = 'run'; S.traeger = true; log('fm.py läuft wieder'); if (f === 'fm_haengt' || f === 'i2c') setFall('ok'); } return; }
+  // Haenger
+  if (f === 'fm_haengt' && S.t - S.hangSeit >= 60) { log('systemd-Watchdog: 60 s kein Lebenszeichen → fm.py neu gestartet'); S.phase = 'restart_fm'; S.phaseBis = S.t + 12; S.bootText = 'Sender startet'; S.frozen = null; return; }
+  if (f === 'system' && S.t - S.hangSeit >= 15) { log('Hardware-Watchdog: 15 s Stillstand → Pi startet neu'); bootStart('Pi startet'); return; }
+  if (f === 'fm_haengt' || f === 'system') return;          // Anzeige bleibt stehen
+  // WLAN
+  S.wifi = f === 'wlan_weg' ? 0 : f === 'wlan_schwach' ? 1 : 4;
+  if (f === 'wlan_weg') {
+    if (S.offline === null) { S.offline = S.t; log('Wächter: kein Internet'); }
+    const weg = S.t - S.offline;
+    if (weg > 120 && !S.wlanNeu) { S.wlanNeu = true; log('Wächter: 2 min offline → WLAN aus/ein'); melden('WLAN wird neu verbunden', 4); }
+    if (weg > 600) { neustart('kein Internet'); return; }
+  } else if (S.offline !== null) { S.offline = null; S.wlanNeu = false; log('Internet wieder da'); }
+  // moOde / mpd (Pruefung alle 5 s)
+  if (S.t >= S.mpdNext) {
+    S.mpdNext = S.t + 5;
+    if (f === 'mpd') { S.mpdFail++; log(`Wächter: moOde antwortet nicht (${S.mpdFail}/3)`);
+      if (S.mpdFail >= 3) { if (S.t - S.mpdNeuAt < 300) { neustart('moOde antwortet nicht'); return; }
+        S.mpdNeuAt = S.t; S.mpdFail = 0; log('Wächter: moOde (mpd) wird neu gestartet'); melden('moOde wird neu gestartet', 5); } }
+    else S.mpdFail = 0;
+  }
+  // I2C
+  if (f === 'i2c' && S.t >= S.i2cNext) { S.i2cNext = S.t + 2; S.i2c++; log(`I²C-Fehler – Chip neu gestartet, Versuch ${S.i2c}/5`);
+    if (S.i2c >= 5) { log('5 Fehler → fm.py beendet, systemd startet es neu'); S.phase = 'restart_fm'; S.phaseBis = S.t + 12; S.bootText = 'Sender startet'; S.i2c = 0; return; } }
+  // Audio: Pegel aus Lautstaerke + Musik
+  const spielt = !S.userStop && f !== 'pause' && f !== 'mpd' && S.offline === null && f !== 'stream';
+  const quelle = f === 'clip' ? 10 : f === 'leise' ? -12 : 0;
+  let rel = spielt ? (S.vol - 62) * 0.55 - 11.5 + quelle + 5 * Math.sin(S.t * 2.1) + 3 * Math.sin(S.t * 7.3) + (Math.random() - 0.5) * 4 : -60;
+  if (f === 'stream') { S.streamSeit = S.streamSeit ?? S.t; if (S.t - S.streamSeit > 15) { log('Stream-Wächter: 15 s Stille trotz Play → Stream neu gestartet'); S.streamSeit = null; setFall('ok'); } }
+  // Stille-Abschaltung (Traeger aus nach 50 s ohne Ton)
+  if (rel < -50) { S.stilleSeit = S.stilleSeit ?? S.t; if (S.traeger && S.t - S.stilleSeit > 50) { S.traeger = false; log('50 s Stille → Träger aus (OFCOM)'); } }
+  else { S.stilleSeit = null; if (!S.traeger) { S.traeger = true; log('Ton da → Träger an'); } }
+  // Pegelmesser
+  S.anz = rel > S.anz ? rel : Math.max(rel, S.anz - 20 * dt);
+  if (rel >= S.spitze || S.t > S.spitzeBis) { S.spitze = rel; S.spitzeBis = S.t + 1.5; }
+  const clip = rel > 0; if (clip) S.clipBis = S.t + 2;
+  // Automatik
+  if (spielt) {
+    S.maxRel = Math.max(S.maxRel, rel);
+    if (clip && S.t - S.autoLetzt > 3 && S.vol > 30) { S.vol = Math.max(30, S.vol - 5); S.autoLetzt = S.t; S.fenster = S.t + 20; S.maxRel = -99; log(`Automatik: CLIP → leiser ${S.vol} %`); melden(`Auto: leiser ${S.vol}%`); }
+    if (S.t > S.fenster) { if (S.maxRel > -35 && S.maxRel < -10 && S.vol < 75) { S.vol = Math.min(75, S.vol + 2); log(`Automatik: zu leise → lauter ${S.vol} %`); melden(`Auto: lauter ${S.vol}%`); }
+      S.fenster = S.t + 20; S.maxRel = -99; }
+  } else { S.fenster = S.t + 20; S.maxRel = -99; }
+  S.rel = rel; S.spielt = spielt;
+  // Statuszeile wie fm.py
+  let problem = null;
+  if (S.offline !== null) { const w = S.t - S.offline; problem = `Kein Internet ${Math.floor(w / 60)}:${String(Math.floor(w % 60)).padStart(2, '0')}`; }
+  else if (S.mpdFail) problem = 'moOde antwortet nicht';
+  else if (S.temp >= 80) problem = `Pi heiss ${Math.round(S.temp)} C`;
+  else if (S.volt < 4.75) problem = 'Netzteil zu schwach';
+  if (f === 'i2c') problem = `Sender-Stoerung V${S.i2c}`;
+  S.status = problem || (!S.traeger ? 'FM 102.3  aus (Stille)' : !spielt ? 'FM 102.3  Pause' : clip ? 'FM 102.3  leiser stellen!' : `FM 102.3 ${Math.round(rel - 8)}dB`);
+}
+function oledZeichnen(now) {
+  if (!oled) return;
+  if (!S.last) S.last = now;
+  const dtr = Math.min(0.25, (now - S.last) / 1000); if (dtr < 0.1) return; S.last = now;
+  const schritte = Math.max(1, Math.round(S.speed));
+  for (let i = 0; i < schritte; i++) simSchritt(dtr);
+  anzeigen(now); instrumente();
+}
+function anzeigen(now) {
+  const c = oled.ctx, ON = '#bff4ff';
+  if ((S.fall === 'fm_haengt' || S.fall === 'system') && S.phase === 'run') return;   // eingefroren
+  c.fillStyle = '#000'; c.fillRect(0, 0, 128, 64); c.fillStyle = ON; c.strokeStyle = ON; c.textBaseline = 'top';
+  const zeilen = (a, b, d) => { c.font = 'bold 12px sans-serif'; c.fillText(a, 0, 0, 127); c.font = '10px sans-serif'; c.fillText(b, 0, 18, 127); c.fillRect(0, 50, 128, 1); c.fillText(d, 0, 53, 127); };
+  if (S.phase === 'off') { oled.tex.needsUpdate = true; return; }
+  if (S.hold) { const h = (performance.now() - S.hold) / 1000; zeilen('Taster', h < 1.5 ? 'kurz = Start/Stop' : 'halten = Ausschalten', h < 1.5 ? '' : `aus in ${Math.max(0, 5 - h).toFixed(1)} s`); oled.tex.needsUpdate = true; return; }
+  if (S.phase === 'countdown') { zeilen('Neustart', S.bootText, `in ${Math.ceil(S.phaseBis - S.t)} s`); oled.tex.needsUpdate = true; return; }
+  if (S.phase === 'boot') { if (S.phaseBis - S.t > 20) { oled.tex.needsUpdate = true; return; }      // Display dunkel, Pi bootet
+    zeilen(S.phaseBis - S.t > 8 ? 'UKW-Webradio' : 'moOde laedt ...', '', S.phaseBis - S.t > 8 ? 'Sender startet' : 'FM 102.3 bereit'); oled.tex.needsUpdate = true; return; }
+  if (S.phase === 'restart_fm') { zeilen('UKW-Webradio', 'fm.py neu gestartet', 'Sender startet'); oled.tex.needsUpdate = true; return; }
+  if (S.infoBis && performance.now() < S.infoBis) {
+    c.font = '10px sans-serif'; const up = Math.floor(S.uptime), d = Math.floor(up / 86400), h = Math.floor(up % 86400 / 3600), m = Math.floor(up % 3600 / 60);
+    [`CPU ${Math.round(S.cpu)} %   RAM ${Math.round(S.ram)} %`, `Temp ${Math.round(S.temp)}°C  Luefter ${S.luefter}`, `Netzteil ${S.volt.toFixed(2).replace('.', ',')} V`,
+     S.dbm == null ? 'WLAN getrennt' : `WLAN ${S.dbm} dBm`, 'IP 192.168.1.42', `Laeuft ${d} d ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`]
+      .forEach((z, i) => c.fillText(z, 0, i * 10.6 - 1, 127));
+    oled.tex.needsUpdate = true; return;
+  }
+  const [sender, titel] = SENDER[S.station];
+  const oben = S.meldung && performance.now() < S.meldungBis ? S.meldung : sender;
+  c.font = 'bold 12px sans-serif'; c.fillText(oben, 0, 0, 108);
+  for (let i = 0; i < 4; i++) { const h = 3 + i * 2, x = 112 + i * 4; if (i < S.wifi) c.fillRect(x, 10 - h, 3, h + 1); else c.strokeRect(x + 0.5, 10.5 - h, 2, h); }
+  if (S.wifi === 0) { c.beginPath(); c.moveTo(110, 0); c.lineTo(127, 11); c.stroke(); }
+  c.font = '10px sans-serif';
+  const tt = S.spielt ? titel : '', w = c.measureText(tt).width, off = w > 127 ? (now / 1000 * 12) % (w + 20) : 0;
+  c.save(); c.beginPath(); c.rect(0, 14, 128, 22); c.clip(); c.fillText(tt, -off, 16); if (off) c.fillText(tt, w + 20 - off, 16); c.restore();
+  const y = 47;
+  if (S.traeger && S.spielt) {
+    for (let i = 0; i < 23; i++) {
+      const db = -20 + i + 1, x = 2 + i * 4, rot = db > 0, h = rot ? 7 : 4;
+      const an = Math.round(S.anz) >= db || (Math.round(S.spitze) >= db && db > Math.round(S.spitze) - 1);
+      if (an) c.fillRect(x, y - h, 3, h + 1); else if (rot) c.strokeRect(x + 0.5, y - h + 0.5, 2, h); else c.fillRect(x + 1, y, 1, 1);
+    }
+    [-15, -10, -5, 0].forEach(db => c.fillRect(2 + (db + 20) * 4 - 1, y + 1, 1, 2));
+    c.font = 'bold 7px sans-serif';
+    if (S.t < S.clipBis) { c.fillRect(106, y - 8, 22, 9); c.fillStyle = '#000'; c.fillText('CLIP', 108, y - 7); c.fillStyle = ON; }
+    else { c.strokeRect(106.5, y - 7.5, 21, 8); c.fillText('CLIP', 108, y - 7); }
+  } else c.fillRect(0, 50, 128, 1);
+  c.font = '10px sans-serif'; const tmpT = Math.round(S.temp) + '°C', tw = c.measureText(tmpT).width;
+  c.fillText(tmpT, 127 - tw, 53); c.fillText(S.status, 0, 53, 124 - tw);
+  oled.tex.needsUpdate = true;
+}
+// ---- Messinstrumente: VU-Meter (Ausgang) und Voltmeter (Pi 5 V) ----
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function zeiger(cv, wert, min, max, marken, rot, titel, einheit, text) {   // rot = [von, bis]
+  const c = cv.getContext('2d'), W = cv.width, H = cv.height, cx = W / 2, cy = H - 14, r = H - 30;
+  c.clearRect(0, 0, W, H);
+  c.fillStyle = '#f3ead2'; c.fillRect(0, 0, W, H);
+  const ang = v => Math.PI * (1.18 + 0.64 * (Math.min(max, Math.max(min, v)) - min) / (max - min));
+  const istRot = v => v >= rot[0] && v <= rot[1];
+  c.lineWidth = 3; c.strokeStyle = '#2b2b2b'; c.beginPath(); c.arc(cx, cy, r, ang(min), ang(max)); c.stroke();
+  c.strokeStyle = '#c8102e'; c.beginPath(); c.arc(cx, cy, r, ang(rot[0]), ang(rot[1])); c.stroke();
+  c.fillStyle = '#2b2b2b'; c.font = '10px "IBM Plex Mono", monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  marken.forEach(([v, l]) => { const a = ang(v); c.lineWidth = 1.5; c.strokeStyle = istRot(v) ? '#c8102e' : '#2b2b2b';
+    c.beginPath(); c.moveTo(cx + Math.cos(a) * (r - 6), cy + Math.sin(a) * (r - 6)); c.lineTo(cx + Math.cos(a) * (r + 4), cy + Math.sin(a) * (r + 4)); c.stroke();
+    c.fillStyle = istRot(v) ? '#c8102e' : '#2b2b2b'; c.fillText(l, cx + Math.cos(a) * (r + 13), cy + Math.sin(a) * (r + 13)); });
+  c.fillStyle = '#2b2b2b'; c.font = 'bold 11px "IBM Plex Sans", sans-serif'; c.fillText(titel, cx, cy - 20);
+  c.font = '11px "IBM Plex Mono", monospace'; c.fillText(text, cx, cy - 6);
+  const a = ang(wert); c.strokeStyle = '#111'; c.lineWidth = 2; c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + Math.cos(a) * (r + 2), cy + Math.sin(a) * (r + 2)); c.stroke();
+  c.fillStyle = '#111'; c.beginPath(); c.arc(cx, cy, 4, 0, 7); c.fill();
+}
+let vuAnz = -20;
+const CPU_HIST = [], CPU_N = 180; let cpuNext = 0;
+function cpuVerlauf() {
+  if (S.t >= cpuNext) { cpuNext = S.t + 1; CPU_HIST.push(S.phase === 'off' ? null : S.cpu); if (CPU_HIST.length > CPU_N) CPU_HIST.shift(); }
+  const cv = document.getElementById('cpuv'), c = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const L = 30, R = W - 8, T = 10, B = H - 18, x = i => L + (R - L) * i / (CPU_N - 1), y = v => B - (B - T) * v / 100;
+  const fg = css('--fg'), muted = css('--muted'), line = css('--line'), acc = css('--accent');
+  c.clearRect(0, 0, W, H); c.font = '10px "IBM Plex Mono", monospace'; c.textAlign = 'right'; c.textBaseline = 'middle';
+  [0, 25, 50, 75, 100].forEach(v => { c.strokeStyle = line; c.lineWidth = 1; c.beginPath(); c.moveTo(L, y(v) + .5); c.lineTo(R, y(v) + .5); c.stroke();
+    c.fillStyle = muted; c.fillText(v + '%', L - 4, y(v)); });
+  c.textAlign = 'left'; c.textBaseline = 'top'; c.fillStyle = muted; c.fillText('−3 min', L, B + 4); c.textAlign = 'right'; c.fillText('jetzt', R, B + 4);
+  const off = CPU_N - CPU_HIST.length;
+  c.beginPath(); let auf = false;
+  CPU_HIST.forEach((v, i) => { if (v == null) { auf = false; return; } const px = x(off + i), py = y(v); if (!auf) { c.moveTo(px, py); auf = true; } else c.lineTo(px, py); });
+  c.strokeStyle = acc; c.lineWidth = 1.6; c.stroke();
+  c.beginPath(); auf = false; let start = 0;
+  CPU_HIST.forEach((v, i) => { if (v == null) return; const px = x(off + i); if (!auf) { c.moveTo(px, B); start = px; auf = true; } c.lineTo(px, y(v)); });
+  if (auf) { c.lineTo(x(off + CPU_HIST.length - 1), B); c.closePath(); c.globalAlpha = .15; c.fillStyle = acc; c.fill(); c.globalAlpha = 1; }
+  const last = CPU_HIST[CPU_HIST.length - 1];
+  if (last != null) { c.fillStyle = acc; c.beginPath(); c.arc(x(CPU_N - 1), y(last), 3, 0, 7); c.fill();
+    c.fillStyle = fg; c.textAlign = 'right'; c.textBaseline = 'bottom'; c.font = '600 11px "IBM Plex Mono", monospace'; c.fillText(Math.round(last) + ' %', R, y(last) - 4 < T + 10 ? T + 12 : y(last) - 4); }
+}
+function instrumente() {
+  cpuVerlauf();
+  const aus = !(S.traeger && S.spielt) || S.phase !== 'run' || S.fall === 'system';
+  S.hfAus = S.phase === 'off';
+  const ziel = aus ? -20 : S.rel;
+  vuAnz += (ziel - vuAnz) * 0.35;
+  zeiger(document.getElementById('vu'), vuAnz, -20, 3, [[-20, '20'], [-10, '10'], [-5, '5'], [-3, '3'], [0, '0'], [3, '+3']], [0, 3], 'VU', 'dB', aus ? 'kein Signal' : `${(vuAnz).toFixed(0)} dB`);
+  const v = S.phase === 'boot' && S.phaseBis - S.t > 33 ? 5.0 : S.volt;
+  zeiger(document.getElementById('volt'), v, 4.4, 5.4, [[4.4, '4,4'], [4.63, '4,63'], [4.8, '4,8'], [5.0, '5,0'], [5.2, '5,2'], [5.4, '5,4']], [4.4, 4.63], 'V', 'V',
+    `${v.toFixed(2).replace('.', ',')} V` + (v < 4.63 ? '  ⚡' : ''));
+  document.getElementById('w-tr').textContent = S.phase === 'off' ? 'aus (Pi aus)' : S.phase !== 'run' || S.fall === 'system' ? 'aus (Neustart)' : S.traeger ? 'an · 102,3 MHz' : 'aus (Stille)';
+  document.getElementById('w-vol').textContent = S.vol + ' %';
+  document.getElementById('w-hf').textContent = S.traeger && S.phase === 'run' ? '≈ 70 dBµV' : '–';
+  const piAus = S.phase === 'off';
+  document.getElementById('w-cpu').textContent = piAus ? '–' : Math.round(S.cpu) + ' %';
+  document.getElementById('w-ram').textContent = piAus ? '–' : Math.round(S.ram) + ' %';
+  document.getElementById('w-temp').textContent = piAus ? '–' : Math.round(S.temp) + ' °C';
+  document.getElementById('w-fan').textContent = piAus ? '–' : S.luefter ? S.luefter + ' U/min' : 'steht';
+  document.getElementById('w-dbm').textContent = piAus ? '–' : S.dbm == null ? 'getrennt' : S.dbm + ' dBm';
+  const up = Math.floor(S.uptime || 0); document.getElementById('w-up').textContent = piAus ? '–' : `${Math.floor(up / 86400)} d ${String(Math.floor(up % 86400 / 3600)).padStart(2, '0')}:${String(Math.floor(up % 3600 / 60)).padStart(2, '0')}`;
+  document.getElementById('w-t').textContent = `${Math.floor(S.t / 60)}:${String(Math.floor(S.t % 60)).padStart(2, '0')}`;
+}
+(function fernbedienung() {
+  document.querySelectorAll('#rc [data-k]').forEach(b => {
+    b.onclick = () => taste(b.dataset.k);
+    b.title = BELEGUNG[b.dataset.k] || 'nicht belegt';
+  });
+  document.getElementById('rc-zu').onclick = () => { const rc = document.getElementById('rc'); rc.classList.toggle('zu');
+    document.getElementById('rc-zu').textContent = rc.classList.contains('zu') ? 'Fernbedienung' : '–'; };
+})();
+(function testUI() {
+  const box = document.getElementById('faults');
+  FAELLE.forEach(([k, t]) => { const b = document.createElement('button'); b.dataset.f = k; b.textContent = t; b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(k === 'ok')); b.onclick = () => setFall(k); box.appendChild(b); });
+  document.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { S.speed = +b.dataset.sp;
+    document.querySelectorAll('[data-sp]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+})();
+function fail(e) { console.error(e); document.getElementById('load').textContent = 'Modell konnte nicht geladen werden.'; }
+// glTF-JSON mit eingebettetem Puffer selbst zu GLB umbauen (data:-URIs sind im Artefakt gesperrt)
+fetch('aether_v7.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(g => {
+  // alle eingebetteten Puffer zu einem BIN-Block zusammenfassen
+  const parts = [], offs = []; let len = 0;
+  g.buffers.forEach(b => {
+    const raw = atob(b.uri.slice(b.uri.indexOf(',') + 1)), u = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) u[i] = raw.charCodeAt(i);
+    offs.push(len); parts.push(u); len += Math.ceil(u.length / 4) * 4;
+  });
+  const bin = new Uint8Array(len); parts.forEach((u, i) => bin.set(u, offs[i]));
+  g.bufferViews.forEach(v => { v.byteOffset = (v.byteOffset || 0) + offs[v.buffer]; v.buffer = 0; });
+  g.buffers = [{ byteLength: len }];
+  let js = new TextEncoder().encode(JSON.stringify(g));
+  const jl = Math.ceil(js.length / 4) * 4, bl = Math.ceil(bin.length / 4) * 4, total = 12 + 8 + jl + 8 + bl;
+  const out = new Uint8Array(total), dv = new DataView(out.buffer);
+  dv.setUint32(0, 0x46546C67, true); dv.setUint32(4, 2, true); dv.setUint32(8, total, true);
+  dv.setUint32(12, jl, true); dv.setUint32(16, 0x4E4F534A, true); out.fill(0x20, 20, 20 + jl); out.set(js, 20);
+  dv.setUint32(20 + jl, bl, true); dv.setUint32(24 + jl, 0x004E4942, true); out.set(bin, 28 + jl);
+  new THREE.GLTFLoader().parse(out.buffer, '', onModel, fail);
+}).catch(fail);
+
+function pick(n) {
+  if (selected) parts[selected].forEach(m => m.material.emissive.setHex(0));
+  selected = selected === n ? null : n;
+  document.querySelectorAll('#list li, #cables li').forEach(li => li.classList.toggle('on', li.dataset.n === selected));
+  const sel = document.getElementById('sel');
+  sel.hidden = !selected; sel.textContent = (selected || '').replace(/^[KS]:/, '');
+  if (selected) parts[selected].forEach(m => m.material.emissive.setHex(0x662200));
+}
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(); let down = null;
+function trefferTaster(e) {
+  const r = canvas.getBoundingClientRect();
+  mouse.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const t = (parts['Taster'] || []).filter(m => m.visible);
+  return t.length && ray.intersectObjects(t, false).length > 0;
+}
+let holdTimer = null;
+function tasterLos(lang) {
+  clearTimeout(holdTimer); controls.enabled = true;
+  (parts['Taster'] || []).forEach(m => m.position.y -= 0.8);
+  const dauer = (performance.now() - S.hold) / 1000; S.hold = null;
+  if (lang) return;
+  if (dauer < 1.5) tasterKurz(); else log(`Taster ${dauer.toFixed(1)} s gehalten – zu kurz zum Ausschalten`);
+}
+canvas.addEventListener('pointerdown', e => {
+  down = [e.clientX, e.clientY];
+  if (trefferTaster(e)) {
+    controls.enabled = false; S.hold = performance.now(); (parts['Taster'] || []).forEach(m => m.position.y += 0.8);
+    holdTimer = setTimeout(() => { tasterLang(); tasterLos(true); }, 5000);
+  }
+});
+canvas.addEventListener('pointerleave', () => { if (S.hold) tasterLos(false); });
+canvas.addEventListener('pointerup', e => {
+  if (S.hold) { tasterLos(false); return; }
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
+  const r = canvas.getBoundingClientRect();
+  mouse.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const pool = Object.values(parts).flat().concat(cables).filter(m => m.visible);
+  const hit = ray.intersectObjects(pool, false)[0];
+  if (hit) { const u = hit.object.userData; pick(u.grp === 'kabel' ? u.key : 'S:' + u.name); document.getElementById('sel').textContent = u.grp === 'kabel' ? u.key.slice(2) : u.grp2 + ' · ' + u.name; }
+});
+
+function lid(mode) {
+  ['lidOn', 'lidUp', 'lidOff'].forEach(id => document.getElementById(id).setAttribute('aria-pressed', String(id === mode)));
+  lidGroup.forEach(m => { m.visible = mode !== 'lidOff'; m.position.z = mode === 'lidUp' ? 45 : 0; });
+}
+document.getElementById('lidOn').onclick = () => lid('lidOn');
+document.getElementById('lidUp').onclick = () => lid('lidUp');
+document.getElementById('lidOff').onclick = () => lid('lidOff');
+document.getElementById('glass').oninput = e => {
+  const a = 1 - e.target.value / 100;
+  [...shell, ...lidGroup].forEach(m => { m.material.opacity = a; m.material.depthWrite = a > 0.95; });
+};
+document.getElementById('cabOn').onclick = () => alle('cables', true);
+document.getElementById('cabOff').onclick = () => alle('cables', false);
+document.getElementById('allOn').onclick = () => alle('list', true);
+document.getElementById('allOff').onclick = () => alle('list', false);
+['Iso', 'Top', 'Front', 'Right'].forEach(k => document.getElementById('v' + k).onclick = () => view(k.toLowerCase()));
+
+(function loop(now) { controls.update(); oledZeichnen(now || 0); renderer.render(scene, camera); requestAnimationFrame(loop); })();
+</script>

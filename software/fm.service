@@ -1,0 +1,24 @@
+[Unit]
+Description=UKW-Sender Si4713 / FM transmitter
+# V7e: nicht auf Netz/moOde warten - fm.py zeigt den Fortschritt selbst an
+After=local-fs.target aether-boot.service
+# V7e: fm.py beliebig oft neu starten, aber nie deswegen den ganzen Pi (keine Neustart-Schleife)
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+NotifyAccess=main
+# fm.py meldet sich alle 10 s; haengt es 60 s, startet systemd es neu
+WatchdogSec=60
+User=oliver
+WorkingDirectory=/home/oliver
+Environment=LG_WD=/tmp
+Environment=PYTHONUNBUFFERED=1
+# V7f: nur NEC (die Fernbedienung) - "all" hat Stoerlicht/Rauschen als Phantom-Codes dekodiert
+ExecStartPre=-+/usr/bin/ir-keytable -c -p nec -s rc0
+ExecStart=/home/oliver/fm-env/bin/python /home/oliver/fm.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=AETHER 102.3 Startanzeige (Countdown bis das Radio laeuft)
+DefaultDependencies=no
+After=local-fs.target systemd-modules-load.service
+ConditionPathExists=/home/oliver/boot_anzeige.py
+
+[Service]
+Type=simple
+ExecStart=/home/oliver/fm-env/bin/python /home/oliver/boot_anzeige.py
+# beendet sich selbst, sobald fm.py das Display uebernimmt; spaetestens nach 15 min
+TimeoutStartSec=0
+RuntimeMaxSec=900
+Nice=-5
+
+[Install]
+WantedBy=sysinit.target
