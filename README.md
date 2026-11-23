@@ -222,6 +222,7 @@ Logs on the Pi: `journalctl -u fm -f`
 | Display stuck on "moOde lädt …" | moOde metadata file off or no station loaded. fm.py now reads directly from mpd and auto-starts a station. |
 | Level around −69 dB, only noise on the receiver | Nothing is playing, or the wrong output device is selected in moOde. |
 | Receiver hears only noise although the Pi transmits | Check the cable path. Test with a portable FM radio next to the box. Try another F→IEC cable. |
+| Noise comes and goes without any log event | Probably the Si4713's automatic antenna tuning, which is unreliable into a 75 Ω cable. Once it works, read `antenne_pf` from `/status.json` and lock it with `/antenne?pf=<value>&speichern=1` (stored in `~/.aether_antenne`, applied after every restart). |
 | Slow boot | moOde starts mpd about 3 minutes after boot. A faster A2 microSD card helps. |
 
 ## Digital twin
