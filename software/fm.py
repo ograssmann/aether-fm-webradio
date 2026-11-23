@@ -21,6 +21,8 @@ def print(*args, **kw):              # alles Ausgegebene auch auf der Diagnose-S
 # ===== Einstellungen / Settings =====
 FREQUENZ_KHZ = 102300        # 102300 = 102,3 MHz
 ANTENNE_DATEI = "/home/oliver/.aether_antenne"   # fest eingestellte Antennen-C in pF (0 = automatisch), per Diagnose-Seite gespeichert
+SENDER_FRISCH_MIN = 180      # V7i: Sender-Chip alle 3 h vorbeugend komplett neu starten (ca. 1,5 s Pause), 0 = aus
+PREEMPHASIS_50US = True      # Europa: 50 us (Bibliothek setzt sonst 75 us = USA)
 LEISTUNG     = 88            # 88 (minimum) .. 115 (maximum); V7f: nur noch 1 Daempfer -> Minimum reicht, am wenigsten HF im Gehaeuse
 
 
@@ -677,7 +679,7 @@ class Tasten:
 
 # ---------- IR-Fernbedienung / IR remote ----------
 AKTIONEN = ["start_stop", "weiter", "zurueck", "lauter", "leiser",
-            "favorit1", "favorit2", "favorit3", "favorit4", "favorit5", "info"]
+            "favorit1", "favorit2", "favorit3", "favorit4", "favorit5", "info", "sender_neu"]
 INFO = {"bis": 0.0}          # Taste 0: Systemseite fuer 10 s (nochmal druecken = zurueck)
 
 
@@ -746,6 +748,10 @@ class Fernbedienung:
         t = self.tasten
         if aktion == "info":
             INFO["bis"] = 0.0 if time.monotonic() < INFO["bis"] else time.monotonic() + 10
+            return
+        if aktion == "sender_neu":                     # Hauptschleife startet den Chip neu (I2C nur dort)
+            diagnose.WUNSCH["sender_neu"] = "Taste"
+            self.tasten.melden("Sender neu")
             return
         if aktion == "start_stop":
             t.start_stop()
@@ -846,8 +852,8 @@ class StreamWaechter:
 class Stillschaltung:
     """Schaltet den Traeger nach STILLE_S Sekunden ohne Ton ab und bei Ton/Play sofort wieder ein.
     Switches the carrier off after STILLE_S seconds of silence, back on as soon as audio returns."""
-    def __init__(self, fm):
-        self.fm, self.an, self.letzter_ton = fm, True, time.monotonic()
+    def __init__(self, tx):
+        self.tx, self.an, self.letzter_ton = tx, True, time.monotonic()   # tx statt fm: nach Chip-Neustart gilt das neue Objekt
         self.spielte = False
 
     def pruefen(self, pegel, spielt):
@@ -857,11 +863,11 @@ class Stillschaltung:
         play_gedrueckt = spielt and not self.spielte   # Pause -> Play
         self.spielte = spielt
         if not self.an and (pegel > STILLE_DB or play_gedrueckt):
-            leistung_setzen(self.fm, LEISTUNG)          # wieder einschalten
+            self.tx.frisch("Ton nach Stille")            # wieder einschalten - mit frischem Chip-Start
             self.an, self.letzter_ton = True, jetzt
             print("Ton da - Sender EIN")
         elif self.an and jetzt - self.letzter_ton >= STILLE_S:
-            leistung_setzen(self.fm, 0)                 # 0 = Traeger aus / carrier off
+            leistung_setzen(self.tx.fm, 0)              # 0 = Traeger aus / carrier off
             self.an = False
             print(f"{STILLE_S} s Stille - Sender AUS")
         return self.an
@@ -882,8 +888,18 @@ class Sender:
         self.fm.tx_frequency_khz = FREQUENZ_KHZ
         leistung_setzen(self.fm, self.leistung)
         self.fm.configure_rds(0xB0B0, station=SENDERNAME.encode()[:8], rds_buffer=self.rds)
+        if PREEMPHASIS_50US:
+            self.fm._set_property(0x2106, 1)            # TX_PREEMPHASIS: 1 = 50 us (Europa)
+        self.seit = time.monotonic()
         print("Chip meldet:", self.fm.tx_frequency_khz, "kHz, Leistung", self.fm.tx_power,
               ", Antennen-C", self.fm.tx_antenna_capacitance, "pF")
+
+    def frisch(self, grund):
+        """Kompletter Neustart des Chips (Reset-Leitung + POWER_UP): startet auch den 32,768-kHz-Quarz
+        und den Synthesizer neu. Hilft, wenn der Chip 'sendet', am Empfaenger aber nur Rauschen ankommt
+        - das behebt ein reines Neu-Setzen der Leistung nicht."""
+        print(f"Sender-Chip wird neu gestartet ({grund})", flush=True)
+        self.starten()
 
     def asq(self):
         """Pegel und Uebersteuerung mit EINER Abfrage / level + overmodulation in one read."""
@@ -962,7 +978,7 @@ def main():
             sd_notify("WATCHDOG=1")
             time.sleep(10)
 
-    stille = Stillschaltung(tx.fm)
+    stille = Stillschaltung(tx)
     strom = StreamWaechter()
     letzter_titel, naechste_messung, naechster_waechter, naechstes_log = None, 0.0, 30.0, 0.0
     naechste_meta, meta = 0.0, (None, "", False)
@@ -1006,6 +1022,15 @@ def main():
                 if ueber or jetzt >= naechstes_log:     # Log nur alle 60 s oder bei Warnung (schont SD-Karte)
                     print(f"Pegel: {pegel:4d} dB" + ("  <-- UEBERSTEUERT, leiser stellen!" if ueber else ""))
                     naechstes_log = jetzt + 60
+            grund = diagnose.WUNSCH.pop("sender_neu", None)
+            if not grund and SENDER_FRISCH_MIN and sendet and jetzt - getattr(tx, "seit", jetzt) > SENDER_FRISCH_MIN * 60:
+                grund = "vorbeugend"
+            if grund:
+                oled.zeigen("Sender", "wird neu gestartet", "1-2 s")
+                tx.frisch(grund)
+                if not sendet:
+                    leistung_setzen(tx.fm, 0)
+                diagnose.ZAEHLER["sender_neu"] += 1
             if "antenne" in diagnose.WUNSCH:            # Antennen-C testen / speichern (Diagnose-Seite)
                 pf, speichern = diagnose.WUNSCH.pop("antenne")
                 globals()["ANTENNE_PF"] = pf

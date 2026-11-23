@@ -16,7 +16,7 @@ ZAEHLER = collections.Counter()                 # z. B. i2c_aussetzer, i2c_neust
 STATUS = {}                                     # wird von fm.py laufend aktualisiert
 WUNSCH = {}                                     # Auftraege an die Hauptschleife (I2C nur dort)
 AKTIONEN = ["start_stop", "weiter", "zurueck", "lauter", "leiser",
-            "favorit1", "favorit2", "favorit3", "favorit4", "favorit5", "info"]
+            "favorit1", "favorit2", "favorit3", "favorit4", "favorit5", "info", "sender_neu"]
 
 
 def protokoll(text):

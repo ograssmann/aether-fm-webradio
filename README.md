@@ -159,13 +159,15 @@ For password-free SSH, run `ssh-copy-id <user>@webradio.local` once. To build an
 | `STILLE_S` | 50 | Carrier off after 50 s of silence |
 | `FAVORITEN` | `[]` | Empty = the first 5 moOde favourites |
 | `LAUT_SCHRITT` | 2 | Volume step in % per key press |
+| `SENDER_FRISCH_MIN` | 180 | Preventive full restart of the transmitter chip every N minutes (0 = off) |
+| `PREEMPHASIS_50US` | True | 50 µs pre-emphasis (Europe); the library default is 75 µs (USA) |
 | I²C speed | 50 kHz | Set in `install.sh` (`I2C_HZ`) |
 
 ### Remote control (preset NEC codes in `ir_tasten.json`)
 
-| Key | OK | ▶ / ◀ | ▲ / ▼ | 1–5 | 0 |
-| --- | --- | --- | --- | --- | --- |
-| Function | Start/Stop | Next / previous station | Volume + / − | Favourite 1–5 | System info (CPU, RAM, temperature, voltage, WiFi) |
+| Key | OK | ▶ / ◀ | ▲ / ▼ | 1–5 | 0 | # |
+| --- | --- | --- | --- | --- | --- | --- |
+| Function | Start/Stop | Next / previous station | Volume + / − | Favourite 1–5 | System info (CPU, RAM, temperature, voltage, WiFi) | Restart the transmitter chip (if the receiver only hears noise) |
 
 For a different remote, run `sudo systemctl stop fm; ~/fm-env/bin/python ~/ir_lernen.py; sudo systemctl start fm` and press Enter to keep a key's existing mapping.
 
@@ -204,6 +206,7 @@ The boot countdown learns how long the Pi takes to start (moOde starts its playe
 | `/status.json` | Machine-readable status |
 | `/log?n=300` | Plain-text log |
 | `/selbsttest?start=1&dauer=300` | Self-test: triggers every function, then runs a 5-minute soak test. Open `/selbsttest` to read the report. |
+| `/aktion?name=sender_neu` | Restarts the transmitter chip (same as remote key #) |
 | `/leistung?wert=100` | Temporarily changes the transmit power (88–115) until restart |
 | `/antenne?pf=20` | Sets a fixed antenna capacitance in pF (`pf=0` = automatic). Add `&speichern=1` to keep it. Useful because the chip's auto-tuning can pick poor values when it feeds a 75 Ω cable. |
 
@@ -222,7 +225,7 @@ Logs on the Pi: `journalctl -u fm -f`
 | Display stuck on "moOde lädt …" | moOde metadata file off or no station loaded. fm.py now reads directly from mpd and auto-starts a station. |
 | Level around −69 dB, only noise on the receiver | Nothing is playing, or the wrong output device is selected in moOde. |
 | Receiver hears only noise although the Pi transmits | Check the cable path. Test with a portable FM radio next to the box. Try another F→IEC cable. |
-| Noise comes and goes without any log event | Probably the Si4713's automatic antenna tuning, which is unreliable into a 75 Ω cable. Once it works, read `antenne_pf` from `/status.json` and lock it with `/antenne?pf=<value>&speichern=1` (stored in `~/.aether_antenne`, applied after every restart). |
+| Noise comes and goes without any log event | The Si4713 can keep reporting "transmitting" while nothing usable reaches the receiver; changing the power doesn't help, but a full chip restart does. Most likely the 32.768 kHz crystal or the synthesizer loses lock (heat, RF inside the box). fm.py now restarts the chip completely every 3 h (`SENDER_FRISCH_MIN`, about 1.5 s gap), every time sound returns after silence, and on remote key **#**. The antenna capacitance can also be locked with `/antenne?pf=<value>&speichern=1`. |
 | Slow boot | moOde starts mpd about 3 minutes after boot. A faster A2 microSD card helps. |
 
 ## Digital twin

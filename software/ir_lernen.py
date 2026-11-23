@@ -29,6 +29,7 @@ FUNKTIONEN = [
     ("favorit4", "Favorit 4"),
     ("favorit5", "Favorit 5"),
     ("info", "Systeminfo (z. B. Taste 0)"),
+    ("sender_neu", "Sender-Chip neu starten bei Rauschen (z. B. Taste #)"),
 ]
 
 
