@@ -205,6 +205,7 @@ The boot countdown learns how long the Pi takes to start (moOde starts its playe
 | `/log?n=300` | Plain-text log |
 | `/selbsttest?start=1&dauer=300` | Self-test: triggers every function, then runs a 5-minute soak test. Open `/selbsttest` to read the report. |
 | `/leistung?wert=100` | Temporarily changes the transmit power (88–115) until restart |
+| `/antenne?pf=20` | Sets a fixed antenna capacitance in pF (`pf=0` = automatic). Add `&speichern=1` to keep it. Useful because the chip's auto-tuning can pick poor values when it feeds a 75 Ω cable. |
 
 The page is only reachable in your home network. It can operate the radio but cannot run system commands.
 

@@ -122,6 +122,16 @@ class Handler(BaseHTTPRequestHandler):
             text = (f"Selbsttest: {'LAEUFT' if TEST['laeuft'] else 'fertig/bereit'} (Start {TEST.get('start', '-')})\n"
                     + "\n".join(TEST["bericht"]) + "\n\n--- Log ---\n" + "\n".join(list(LOG)[-120:]))
             return self._senden(200, "text/plain; charset=utf-8", text)
+        if u.path == "/antenne":                        # Antennen-C: pf=0 (automatisch) oder 0.25..47.75; speichern=1 dauerhaft
+            try:
+                pf = round(float(q.get("pf", [""])[0]) * 4) / 4
+            except ValueError:
+                pf = -1
+            if pf == 0 or 0.25 <= pf <= 47.75:
+                WUNSCH["antenne"] = (pf, bool(q.get("speichern")))
+                protokoll(f"Diagnose-Seite: Antennen-C -> {pf}")
+                return self._senden(200, "text/plain", f"Antennen-C wird auf {pf} pF gesetzt (0 = automatisch)")
+            return self._senden(400, "text/plain", "pf 0 oder 0.25..47.75")
         if u.path == "/leistung":                       # Sendeleistung testweise aendern (88..115), bis zum Neustart
             try:
                 w = int(q.get("wert", [""])[0])

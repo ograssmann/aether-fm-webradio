@@ -20,7 +20,26 @@ def print(*args, **kw):              # alles Ausgegebene auch auf der Diagnose-S
 
 # ===== Einstellungen / Settings =====
 FREQUENZ_KHZ = 102300        # 102300 = 102,3 MHz
+ANTENNE_DATEI = "/home/oliver/.aether_antenne"   # fest eingestellte Antennen-C in pF (0 = automatisch), per Diagnose-Seite gespeichert
 LEISTUNG     = 88            # 88 (minimum) .. 115 (maximum); V7f: nur noch 1 Daempfer -> Minimum reicht, am wenigsten HF im Gehaeuse
+
+
+def antenne_pf():
+    """Antennen-Kapazitaet: 0 = automatische Abstimmung (Chip-Standard), sonst fester Wert 0,25..47,75 pF."""
+    try:
+        v = float(open(ANTENNE_DATEI).read().strip())
+        return v if v == 0 or 0.25 <= v <= 47.75 else 0
+    except (OSError, ValueError):
+        return 0
+
+
+ANTENNE_PF = antenne_pf()
+
+
+def leistung_setzen(fm, p):
+    """Sendeleistung (0 = Traeger aus) mit der eingestellten Antennen-C setzen.
+    Bei Kabeleinspeisung (75 Ohm) findet die Automatik oft keinen sinnvollen Wert - deshalb einstellbar."""
+    fm.set_tx_power_capacitance(p, ANTENNE_PF if p else 0)
 ADRESSE      = 0x63          # Si4713: 0x63 oder/or 0x11
 SENDERNAME   = "WEBRADIO"    # RDS, max. 8 Zeichen/characters
 METADATEN    = "/var/local/www/currentsong.txt"   # moOde: Metadata file = ON
@@ -838,11 +857,11 @@ class Stillschaltung:
         play_gedrueckt = spielt and not self.spielte   # Pause -> Play
         self.spielte = spielt
         if not self.an and (pegel > STILLE_DB or play_gedrueckt):
-            self.fm.tx_power = LEISTUNG                 # wieder einschalten
+            leistung_setzen(self.fm, LEISTUNG)          # wieder einschalten
             self.an, self.letzter_ton = True, jetzt
             print("Ton da - Sender EIN")
         elif self.an and jetzt - self.letzter_ton >= STILLE_S:
-            self.fm.tx_power = 0                        # 0 = Traeger aus / carrier off
+            leistung_setzen(self.fm, 0)                 # 0 = Traeger aus / carrier off
             self.an = False
             print(f"{STILLE_S} s Stille - Sender AUS")
         return self.an
@@ -861,7 +880,7 @@ class Sender:
     def starten(self):
         self.fm = adafruit_si4713.SI4713(self.i2c, address=ADRESSE, reset=self.reset, timeout_s=0.5)
         self.fm.tx_frequency_khz = FREQUENZ_KHZ
-        self.fm.tx_power = self.leistung
+        leistung_setzen(self.fm, self.leistung)
         self.fm.configure_rds(0xB0B0, station=SENDERNAME.encode()[:8], rds_buffer=self.rds)
         print("Chip meldet:", self.fm.tx_frequency_khz, "kHz, Leistung", self.fm.tx_power,
               ", Antennen-C", self.fm.tx_antenna_capacitance, "pF")
@@ -879,16 +898,16 @@ class Sender:
         if f != FREQUENZ_KHZ or p != soll_p:
             print(f"Waechter: Chip meldet {f} kHz / {p} - stelle neu ein")
             self.fm.tx_frequency_khz = FREQUENZ_KHZ
-            self.fm.tx_power = soll_p
+            leistung_setzen(self.fm, soll_p)
             self.fm.rds_buffer = self.rds
             return
         if soll_an:                                 # Antennenabstimmung pruefen (normal ca. 5-40 pF)
             c = self.fm.tx_antenna_capacitance
             if c != getattr(self, "letzte_c", None) and abs(c - getattr(self, "letzte_c", c)) >= 3:
                 print(f"Waechter: Antennen-C jetzt {c} pF (vorher {self.letzte_c} pF)")
-            if c < 2 or c >= 47:
+            if ANTENNE_PF == 0 and (c < 2 or c >= 47):
                 print(f"Waechter: Antennen-C {c} pF unplausibel - stimme neu ab")
-                self.fm.tx_power = soll_p             # loest neue automatische Abstimmung aus
+                leistung_setzen(self.fm, soll_p)      # loest neue automatische Abstimmung aus
                 c = self.fm.tx_antenna_capacitance
                 print(f"Waechter: nach Neuabstimmung {c} pF")
             self.letzte_c = c
@@ -987,11 +1006,23 @@ def main():
                 if ueber or jetzt >= naechstes_log:     # Log nur alle 60 s oder bei Warnung (schont SD-Karte)
                     print(f"Pegel: {pegel:4d} dB" + ("  <-- UEBERSTEUERT, leiser stellen!" if ueber else ""))
                     naechstes_log = jetzt + 60
+            if "antenne" in diagnose.WUNSCH:            # Antennen-C testen / speichern (Diagnose-Seite)
+                pf, speichern = diagnose.WUNSCH.pop("antenne")
+                globals()["ANTENNE_PF"] = pf
+                if speichern:
+                    try:
+                        open(ANTENNE_DATEI, "w").write(f"{pf}\n")
+                    except OSError:
+                        pass
+                if sendet:
+                    leistung_setzen(tx.fm, tx.leistung)
+                print(f"Antennen-C jetzt {'automatisch' if pf == 0 else str(pf) + ' pF'}"
+                      f"{' (gespeichert)' if speichern else ''} - Chip meldet {tx.fm.tx_antenna_capacitance} pF", flush=True)
             if "leistung" in diagnose.WUNSCH:           # von der Diagnose-Seite (Test)
                 tx.leistung = diagnose.WUNSCH.pop("leistung")
                 globals()["LEISTUNG"] = tx.leistung     # auch fuer das Wiedereinschalten nach Stille
                 if sendet:
-                    tx.fm.tx_power = tx.leistung
+                    leistung_setzen(tx.fm, tx.leistung)
                 print(f"Leistung jetzt {tx.leistung} dBuV (Chip: {tx.fm.tx_power}, Antennen-C {tx.fm.tx_antenna_capacitance} pF)", flush=True)
             if jetzt >= naechster_waechter:             # alle 30 s Frequenz/Leistung kontrollieren
                 tx.pruefen(sendet)
