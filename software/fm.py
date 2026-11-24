@@ -140,6 +140,16 @@ def lies_meta():
     return sender, titel, spielt
 
 
+LETZTER_SENDER = "/home/oliver/.aether_letzter_sender"
+
+
+def letzter_sender():
+    try:
+        return open(LETZTER_SENDER).read().strip()
+    except OSError:
+        return ""
+
+
 def mpc(*args):
     r = subprocess.run(["mpc", *args], capture_output=True, text=True)
     return r.stdout
@@ -779,11 +789,18 @@ class PowerTaster:
                              if POWER_NAME in evdev.InputDevice(p).name), None)
         except Exception as e:
             print(f"Power-Taster nicht verfuegbar ({e})")
+            diagnose.STATUS["taster"] = f"nicht verfuegbar ({e})"
             return
         if not self.dev:
-            print("Power-Taster (pwr_button) nicht gefunden")
+            try:
+                namen = [evdev.InputDevice(p).name for p in evdev.list_devices()]
+            except Exception:
+                namen = []
+            print(f"Power-Taster (pwr_button) nicht gefunden - Geraete: {namen}")
+            diagnose.STATUS["taster"] = f"nicht gefunden {namen}"
             return
-        print("Power-Taster bereit: kurz = Start/Stop, 5 s = Ausschalten")
+        print(f"Power-Taster bereit ({self.dev.path}): kurz = Start/Stop, 5 s = Ausschalten")
+        diagnose.STATUS["taster"] = f"bereit {self.dev.path}, noch nie gedrueckt"
         threading.Thread(target=self._lauf, daemon=True).start()
 
     def _lauf(self):
@@ -797,6 +814,8 @@ class PowerTaster:
                     if ev.value == 1:
                         gedrueckt = time.monotonic()
                         diagnose.ZAEHLER["taster"] += 1
+                        diagnose.STATUS["taster"] = f"bereit {self.dev.path}, zuletzt gedrueckt {time.strftime('%H:%M:%S')}"
+                        print("Taster gedrueckt", flush=True)
                     elif ev.value == 0 and gedrueckt is not None:
                         print(f"Taster: {time.monotonic() - gedrueckt:.2f} s gedrueckt", flush=True)
                         if time.monotonic() - gedrueckt < POWER_KURZ_S:
@@ -812,21 +831,47 @@ ZUSTAND = {"nutzer_stop": False}   # True, wenn mit der Stop-Taste angehalten
 
 
 class StreamWaechter:
-    """Startet den Radiostream neu, wenn er haengt (spielt, aber Stille) oder unerwartet stoppt."""
+    """Startet den Radiostream neu, wenn er haengt (spielt, aber Stille) oder ohne Stop-Taste stoppt.
+    Prueft den Zustand jedes Mal neu (nicht nur beim Wechsel) und versucht es endlos mit wachsender Pause.
+    Ist die Playlist leer, wird der zuletzt gespielte Sender (oder Favorit 1) neu geladen."""
     def __init__(self):
         mpc("repeat", "on")                     # Stream-Ende -> gleicher Sender startet neu
         mpc("single", "off")
         self.stille_seit = None
         self.stop_seit = None
-        self.spielte = True              # so wird auch "beim Start schon pausiert/gestoppt" erkannt
         self.letzter_neustart = -999.0
+        self.versuche = 0
+        self.naechstes_merken = 0.0
+
+    def _sender_merken(self, jetzt):
+        if jetzt < self.naechstes_merken:
+            return
+        self.naechstes_merken = jetzt + 60
+        url = mpc("-f", "%file%", "current").strip()
+        if url and url != letzter_sender():
+            try:
+                open(LETZTER_SENDER, "w").write(url + "\n")
+            except OSError:
+                pass
 
     def _neustart(self, grund, jetzt):
-        print(f"Stream {grund} - starte neu")
+        self.versuche += 1
+        print(f"Stream {grund} - starte neu (Versuch {self.versuche})", flush=True)
+        diagnose.ZAEHLER["stream_neustart"] += 1
+        if not mpc("playlist").strip():         # Playlist leer -> letzten Sender / Favorit 1 laden
+            liste = favoriten()
+            url = letzter_sender() or (liste[0] if liste else None)
+            if url:
+                print(f"Playlist leer - lade {anzeigename(url)}", flush=True)
+                mpc("clear")
+                mpc("add", url)
         mpc("stop")
         time.sleep(1)
         mpc("play")
         self.letzter_neustart, self.stille_seit, self.stop_seit = jetzt, None, None
+
+    def _pause(self):
+        return min(300, 30 * 2 ** min(self.versuche, 4))   # 30, 60, 120, 240, 300 s ...
 
     def pruefen(self, pegel, spielt, jetzt):
         if spielt:
@@ -834,18 +879,23 @@ class StreamWaechter:
             self.stop_seit = None
             if pegel > STILLE_DB:
                 self.stille_seit = None
+                if self.versuche:
+                    print(f"Stream laeuft wieder (nach {self.versuche} Versuch(en))", flush=True)
+                self.versuche = 0
+                self._sender_merken(jetzt)
             elif self.stille_seit is None:
                 self.stille_seit = jetzt
-            elif jetzt - self.stille_seit >= HAENGT_S and jetzt - self.letzter_neustart >= 60:
+            elif jetzt - self.stille_seit >= HAENGT_S and jetzt - self.letzter_neustart >= max(60, self._pause()):
                 self._neustart(f"haengt ({HAENGT_S} s Stille)", jetzt)
         else:
             self.stille_seit = None
-            if self.spielte and not ZUSTAND["nutzer_stop"] and NEUSTART_NACH_STOP:
-                self.stop_seit = jetzt              # gerade eben unerwartet gestoppt
-            if (self.stop_seit is not None and not ZUSTAND["nutzer_stop"]
-                    and jetzt - self.stop_seit >= HAENGT_S and jetzt - self.letzter_neustart >= 60):
-                self._neustart("unerwartet gestoppt", jetzt)
-        self.spielte = spielt
+            if ZUSTAND["nutzer_stop"] or not NEUSTART_NACH_STOP:
+                self.stop_seit, self.versuche = None, 0
+                return
+            if self.stop_seit is None:
+                self.stop_seit = jetzt
+            if jetzt - self.stop_seit >= HAENGT_S and jetzt - self.letzter_neustart >= self._pause():
+                self._neustart("gestoppt ohne Stop-Taste", jetzt)
 
 
 # ---------- Stille-Abschaltung / silence switch-off ----------
@@ -1016,8 +1066,7 @@ def main():
             if jetzt >= naechste_messung:               # Logik alle 2 s
                 ueber, ueber_2s = ueber_2s, False
                 sendet = stille.pruefen(pegel, spielt)
-                if sender is not None:
-                    strom.pruefen(pegel, spielt, jetzt)
+                strom.pruefen(pegel, spielt and sender is not None, jetzt)   # auch ohne Metadaten (= gestoppt)
                 naechste_messung = jetzt + 2
                 if ueber or jetzt >= naechstes_log:     # Log nur alle 60 s oder bei Warnung (schont SD-Karte)
                     print(f"Pegel: {pegel:4d} dB" + ("  <-- UEBERSTEUERT, leiser stellen!" if ueber else ""))
