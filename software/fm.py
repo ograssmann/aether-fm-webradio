@@ -780,49 +780,59 @@ class Fernbedienung:
 # ---------- Taster an J2 (Power-Anschluss Pi 5) ----------
 class PowerTaster:
     """Kurz druecken = Radio Start/Stop. Langes Druecken (5 s) erledigt systemd-logind (Ausschalten),
-    bei ausgeschaltetem Pi schaltet der Taster ihn ein (macht der Pi 5 selbst)."""
+    bei ausgeschaltetem Pi schaltet der Taster ihn ein (macht der Pi 5 selbst).
+    Hoert auf ALLE Eingabegeraete, die KEY_POWER melden koennen, und protokolliert jede Taste
+    (ausser Fernbedienung) - so sieht man auf der Diagnose-Seite, ob ueberhaupt etwas ankommt."""
     def __init__(self, tasten):
         self.tasten = tasten
+        self.gedrueckt = None
         try:
             import evdev
-            self.dev = next((evdev.InputDevice(p) for p in evdev.list_devices()
-                             if POWER_NAME in evdev.InputDevice(p).name), None)
+            from evdev import ecodes
+            geraete = [evdev.InputDevice(p) for p in evdev.list_devices()]
         except Exception as e:
-            print(f"Power-Taster nicht verfuegbar ({e})")
+            print(f"Power-Taster nicht verfuegbar ({e})", flush=True)
             diagnose.STATUS["taster"] = f"nicht verfuegbar ({e})"
             return
-        if not self.dev:
+        liste = []
+        for d in geraete:
             try:
-                namen = [evdev.InputDevice(p).name for p in evdev.list_devices()]
+                kann_power = ecodes.KEY_POWER in d.capabilities().get(ecodes.EV_KEY, [])
             except Exception:
-                namen = []
-            print(f"Power-Taster (pwr_button) nicht gefunden - Geraete: {namen}")
-            diagnose.STATUS["taster"] = f"nicht gefunden {namen}"
-            return
-        print(f"Power-Taster bereit ({self.dev.path}): kurz = Start/Stop, 5 s = Ausschalten")
-        diagnose.STATUS["taster"] = f"bereit {self.dev.path}, noch nie gedrueckt"
-        threading.Thread(target=self._lauf, daemon=True).start()
+                kann_power = False
+            liste.append(f"{d.path}={d.name}{' [POWER]' if kann_power else ''}")
+            if IR_NAME in d.name:
+                continue
+            threading.Thread(target=self._lauf, args=(d,), daemon=True).start()
+        diagnose.STATUS["eingabegeraete"] = liste
+        diagnose.STATUS["taster"] = "bereit, noch nie gedrueckt"
+        print(f"Power-Taster: hoere auf {liste}", flush=True)
 
-    def _lauf(self):
+    def _lauf(self, dev):
         from evdev import ecodes
-        gedrueckt = None
         while True:
             try:
-                for ev in self.dev.read_loop():
-                    if ev.type != ecodes.EV_KEY or ev.code != ecodes.KEY_POWER:
+                for ev in dev.read_loop():
+                    if ev.type != ecodes.EV_KEY:
+                        continue
+                    name = ecodes.KEY.get(ev.code, ev.code)
+                    diagnose.ZAEHLER["eingabe"] += 1
+                    print(f"Eingabe {dev.name}: {name} {('los', 'gedrueckt', 'gehalten')[min(ev.value, 2)]}", flush=True)
+                    if ev.code != ecodes.KEY_POWER:
                         continue
                     if ev.value == 1:
-                        gedrueckt = time.monotonic()
+                        self.gedrueckt = time.monotonic()
                         diagnose.ZAEHLER["taster"] += 1
-                        diagnose.STATUS["taster"] = f"bereit {self.dev.path}, zuletzt gedrueckt {time.strftime('%H:%M:%S')}"
-                        print("Taster gedrueckt", flush=True)
-                    elif ev.value == 0 and gedrueckt is not None:
-                        print(f"Taster: {time.monotonic() - gedrueckt:.2f} s gedrueckt", flush=True)
-                        if time.monotonic() - gedrueckt < POWER_KURZ_S:
+                        diagnose.STATUS["taster"] = f"zuletzt gedrueckt {time.strftime('%H:%M:%S')} ({dev.name})"
+                    elif ev.value == 0 and self.gedrueckt is not None:
+                        dauer = time.monotonic() - self.gedrueckt
+                        self.gedrueckt = None
+                        print(f"Taster: {dauer:.2f} s gedrueckt", flush=True)
+                        if dauer < POWER_KURZ_S:
                             self.tasten.start_stop()
-                        gedrueckt = None
-            except OSError as e:
-                print(f"Power-Taster-Fehler ({e}) - neuer Versuch in 5 s")
+            except Exception as e:          # nie still sterben
+                print(f"Power-Taster-Fehler {dev.path} ({e!r}) - neuer Versuch in 5 s", flush=True)
+                diagnose.STATUS["taster"] = f"Fehler {e!r}"
                 time.sleep(5)
 
 
