@@ -3,6 +3,7 @@ Zeigt Status und Log von fm.py und kann Tasten der Fernbedienung ausloesen (zum 
 Nur lesen + Radio-Bedienung; keine Systembefehle."""
 import collections
 import html
+import os
 import json
 import subprocess
 import threading
@@ -19,8 +20,36 @@ AKTIONEN = ["start_stop", "weiter", "zurueck", "lauter", "leiser",
             "favorit1", "favorit2", "favorit3", "favorit4", "favorit5", "info", "sender_neu"]
 
 
+LOGDATEI = "/home/oliver/aether_log.txt"       # ueberlebt Neustarts (max. ~2 x 1 MB)
+LOG_MAX = 1_000_000
+
+
+def _datei_schreiben(zeile):
+    try:
+        if os.path.exists(LOGDATEI) and os.path.getsize(LOGDATEI) > LOG_MAX:
+            os.replace(LOGDATEI, LOGDATEI + ".1")
+        with open(LOGDATEI, "a", encoding="utf-8") as f:
+            f.write(zeile + "\n")
+    except OSError:
+        pass
+
+
+def _alte_laden():
+    try:
+        with open(LOGDATEI, encoding="utf-8", errors="replace") as f:
+            LOG.extend(z.rstrip("\n") for z in collections.deque(f, maxlen=LOG.maxlen))
+    except OSError:
+        pass
+
+
 def protokoll(text):
-    LOG.append(f"{time.strftime('%H:%M:%S')} {text}")
+    zeile = f"{time.strftime('%d.%m %H:%M:%S')} {text}"
+    LOG.append(zeile)
+    _datei_schreiben(zeile)
+
+
+_alte_laden()
+protokoll("===== fm.py gestartet (Uptime %.0f s) =====" % float(open("/proc/uptime").read().split()[0]))
 
 
 def _cmd(*args):
